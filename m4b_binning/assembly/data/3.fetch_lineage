@@ -1,0 +1,5 @@
+#!/bin/bash
+
+wget https://www.dropbox.com/s/honc1j5g7wli3zv/all_taxa_lineage_notnone.tsv.gz
+gunzip all_taxa_lineage_notnone.tsv.gz
+

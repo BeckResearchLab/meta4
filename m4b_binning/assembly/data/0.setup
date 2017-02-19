@@ -1,0 +1,10 @@
+#!/bin/bash
+
+for sample in `cat samples`
+do
+	echo $sample
+	mkdir $sample
+	cd $sample
+	ln -sf /dacb/globus/Methane_oxidation_as_a_community_function__defining_partnerships_and_strategies_through_sequencing_metagenomes_and_metatranscriptomes_of_laboratory_manipulated_microcosms__Lake_Washington_sediment_Metagenome_*_"$sample"_*/Raw_Data/*.fastq.gz .
+	cd ..
+done
