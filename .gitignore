@@ -1,3 +1,6 @@
+rnaseq/alignments/map_to_contigs_longer_than_1500bp/
+rnaseq/data
+
 m4b_binning/170111_metabat_checkm/
 m4b_binning/analysis--deprecated/
 m4b_binning/assembly_mycc/
