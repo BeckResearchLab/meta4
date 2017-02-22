@@ -1,0 +1,92 @@
+#!/bin/bash
+
+TRIMMOMATIC_DIR=/work/software/trimmomatic
+TRIMMOMATIC=$TRIMMOMATIC_DIR/trimmomatic-0.30.jar
+FASTQ_QUALITY_FILTER=/work/software/fastx_toolkit/bin/fastq_quality_filter
+
+\rm -rf trim.jobs
+
+for sample in `cat samples`
+do
+	echo $sample
+	if [ -e trim ]
+	then
+		echo "skipping $sample as trim directory already exists"
+		continue
+	fi
+	cd $sample
+	outfiles=""
+	infiles=""
+	outses=""
+	outses_trim=""
+	for file in *.fastq.gz
+	do
+		infiles="$infiles $file"
+		id=`echo $file | awk -F'.' '{ print $4 }'`
+		outfiles="$outfiles ${id}_pe ${id}_se"
+		outses="$outses ${id}_se"
+	done
+	mkdir trim
+	cd trim
+	cat << EOF > run
+#!/bin/bash
+
+cd `pwd`
+
+# split interleaved files, run trimmomatic and reinterleave and cleanup
+touch combined.fq
+
+EOF
+	for file in ../*.fastq.gz
+	do
+		id=`echo $file | awk -F'.' '{ print $6 }'`
+cat << EOF >> run
+split-paired-reads.py -0 ${id}.0.fq.gz -1 ${id}.1.fq.gz -2 ${id}.2.fq.gz --gzip $file
+java -jar $TRIMMOMATIC PE ${id}.1.fq.gz ${id}.2.fq.gz ${id}_1_pe ${id}_1_se ${id}_2_pe ${id}_2_se ILLUMINACLIP:$TRIMMOMATIC_DIR/adapters/TruSeq3-PE.fa:2:30:10
+\rm -rf ${id}.1.fq.gz ${id}.2.fq.gz
+interleave-reads.py ${id}_1_pe ${id}_2_pe >> combined.fq
+\rm -rf ${id}_1_pe ${id}_2_pe
+cat ${id}_1_se ${id}_2_se > ${id}_se
+\rm -rf ${id}_1_se ${id}_2_se
+zcat ${id}.0.fq.gz >> ${id}_se
+\rm -rf ${id}.0.fq.gz
+
+EOF
+	done
+
+cat << EOF >> run
+
+# quality filter the combined file
+$FASTQ_QUALITY_FILTER -Q33 -q 30 -p 50 -i combined.fq > combined-trim.fq
+\rm -rf combined.fq
+
+# break the filtered file into paired end file and single end file
+extract-paired-reads.py combined-trim.fq
+\rm -rf combined-trim.fq
+
+# quality filter the single ended reads and orphans and cleanup
+EOF
+outses_trim="combined-trim.fq.se"
+for file in $outses
+do
+	outses_trim="$outses_trim ${file}.trim"
+cat << EOF >> run
+$FASTQ_QUALITY_FILTER -Q33 -q 30 -p 50 -i $file > $file.trim
+\rm -rf $file
+EOF
+done
+
+cat << EOF >> run
+
+# compress everything and do a final cleanup
+gzip -9c combined-trim.fq.pe > $sample.pe.qc.fq.gz
+gzip -9c $outses_trim > $sample.se.qc.fq.gz
+
+\rm -rf $outses_trim combined-trim.fq.pe
+EOF
+	chmod +x run
+	cd ../..
+	echo "`pwd`/$sample/trim/run > `pwd`/$sample/trim/run.log" >> trim.jobs
+done
+
+parallel -a trim.jobs --max-procs 16

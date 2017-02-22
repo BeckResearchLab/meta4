@@ -1,0 +1,18 @@
+#!/bin/bash
+
+if [ ! -e nr.faa ]
+then
+	wget ftp://ftp.ncbi.nih.gov/blast/db/FASTA/nr.gz
+	gunzip nr.gz
+	mv nr nr.faa
+fi
+
+if [ ! -e prot.accession2taxid ]
+then
+	wget ftp://ftp.ncbi.nih.gov/taxonomy/accession2taxid/prot.accession2taxid.gz
+fi
+
+if [ ! -e prot.accession2taxid.txt ]
+then
+	zcat prot.accession2taxid | awk -F'\t' '{ printf $2, $3 }' > prot.accession2taxid.txt
+fi

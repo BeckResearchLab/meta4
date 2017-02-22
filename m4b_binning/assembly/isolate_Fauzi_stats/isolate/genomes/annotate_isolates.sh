@@ -1,0 +1,5 @@
+# run prokka
+source activate py3  # for Pandas
+
+cd prokka
+python prokka.py
