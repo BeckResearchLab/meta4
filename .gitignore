@@ -1,3 +1,45 @@
+m4b_binning/assembly/.gitignore
+m4b_binning/assembly/LICENSE
+m4b_binning/assembly/README.md
+
+*.pdf
+*.err
+*.fai
+*.faa
+*.ffn
+*.fna
+*.fsa
+*.gbk
+*.gff
+*.sqn
+*.tbl
+
+m4b_binning/assembly/assembly/done
+m4b_binning/assembly/assembly/log
+m4b_binning/assembly/assembly/opts.txt
+m4b_binning/assembly/contigs_by_chunk/contigs_longer_than_1500bp_contig_lengths_in_order.tsv
+m4b_binning/assembly/isolate_Fauzi_stats/isolate/obtaining_isolate_stats.txt
+m4b_binning/assembly/map_reads_to_contigs/170221_compare_bam_file_sizes_of_repeated_mappings.ipynb
+m4b_binning/assembly/map_reads_to_contigs/*.pdf
+m4b_binning/assembly/map_reads_to_contigs/joblog_*
+m4b_binning/assembly/map_reads_to_contigs/map_to_contigs_longer_than_1500bp--20_single_threads/
+m4b_binning/assembly/map_reads_to_contigs/map_to_contigs_longer_than_1500bp/
+m4b_binning/assembly/map_reads_to_contigs/map_to_contigs_longer_than_1500bp_test_scale/
+m4b_binning/assembly/map_reads_to_contigs/map_to_contigs_longer_than_1500bp_thread_tests/
+m4b_binning/assembly/map_reads_to_contigs/old/
+m4b_binning/assembly/map_reads_to_contigs/stdout_stderr_170217_/
+m4b_binning/assembly/map_reads_to_contigs/test_gene_counts/
+m4b_binning/assembly/metabat/
+m4b_binning/assembly/prokka/contigs/__pycache__/
+m4b_binning/garbage/
+
+m4b_binning/assembly/170219_found_executables--keep.txt
+m4b_binning/assembly/170219_found_executables.txt
+m4b_binning/assembly/170219_found_python_files.txt
+m4b_binning/assembly/6.map_reads_to_bins--print_to_learn
+m4b_binning/assembly/data/sample_info/sample_read_counts.tsv
+software/
+
 *.log
 *.jobs
 *.swp
@@ -10,42 +52,42 @@ ANI/ANIs_by_JGI_tool/
 ANI/*.ipynb
 abundances/results/
 
-assess_sample_mappings_to_contigs/*.ipynb
-assess_sample_mappings_to_contigs/*.pdf
-assess_sample_mappings_to_contigs/figures/
-assess_sample_mappings_to_contigs/results/
-assess_sample_mappings_to_contigs/retired/
-assess_unbinned_reads_across_samples/data/
+*/assess_sample_mappings_to_contigs/*.ipynb
+*/assess_sample_mappings_to_contigs/*.pdf
+*/assess_sample_mappings_to_contigs/figures/
+*/assess_sample_mappings_to_contigs/results/
+*/assess_sample_mappings_to_contigs/retired/
+*/assess_unbinned_reads_across_samples/data/
 
-bin_info/CheckM_qa.txt
-bin_info/CheckM_results.tsv
-bin_info/metabat_bins--all_info.tsv
-bin_info/metabat_bins.tsv
-bin_info/phylophlan_result.tsv
-checkm_qa.out_err
+*/bin_info/CheckM_qa.txt
+*/bin_info/CheckM_results.tsv
+*/bin_info/metabat_bins--all_info.tsv
+*/bin_info/metabat_bins.tsv
+*/bin_info/phylophlan_result.tsv
+*/checkm_qa.out_err
 
-data/all_taxa_lineage_notnone.tsv
-data/nr.dmnd
-data/nr.faa
-data/prot.accession2taxid.gz
-data/prot.accession2taxid.txt
+*/data/all_taxa_lineage_notnone.tsv
+*/data/nr.dmnd
+*/data/nr.faa
+*/data/prot.accession2taxid.gz
+*/data/prot.accession2taxid.txt
 
-holding_area/
+*/holding_area/
 
-map_reads/final.contigs.fa.*
+*/map_reads/final.contigs.fa.*
 
-metabat335/
+*/metabat335/
 */genomes/prokka/*.csv
 */genomes/prokka/results/
 isolate_CheckM.txt
 isolate_Fauzi_stats/isolate/genomes/prokka/results/
 isolate_Fauzi_stats/isolate/genomes/prokka/summary.csv
 
-prokka/results/
-prokka/summary.csv
+*/prokka/results/
+*/prokka/summary.csv
 
-phylophlan/*.txt
-phylophlan/*.nwk
+*/phylophlan/*.txt
+*/phylophlan/*.nwk
 
 *.bam
 *.bai
