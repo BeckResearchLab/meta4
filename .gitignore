@@ -40,6 +40,12 @@ m4b_binning/assembly/6.map_reads_to_bins--print_to_learn
 m4b_binning/assembly/data/sample_info/sample_read_counts.tsv
 software/
 
+m4b_binning/assembly/prokka/contigs/contigs_longer_than_10000bp_02082017/contigs_longer_than_10000bp_02082017.txt
+m4b_binning/assembly/prokka/contigs/contigs_longer_than_10000bp_02082017/headers.txt
+m4b_binning/assembly/prokka/contigs/contigs_longer_than_1500bp/
+m4b_binning/assembly/prokka/contigs/contigs_longer_than_2500bp_02082017/contigs_longer_than_2500bp_02082017.txt
+m4b_binning/assembly/prokka/contigs/contigs_longer_than_2500bp_02082017/headers.txt
+
 *.log
 *.jobs
 *.swp
