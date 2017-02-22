@@ -46,6 +46,18 @@ m4b_binning/assembly/prokka/contigs/contigs_longer_than_1500bp/
 m4b_binning/assembly/prokka/contigs/contigs_longer_than_2500bp_02082017/contigs_longer_than_2500bp_02082017.txt
 m4b_binning/assembly/prokka/contigs/contigs_longer_than_2500bp_02082017/headers.txt
 
+m4b_binning/assembly/assembly/final.contigs.len
+m4b_binning/assembly/assembly/intermediate_contigs/
+m4b_binning/assembly/data/samples
+m4b_binning/assembly/isolate_Fauzi_stats/Fauzi/
+m4b_binning/assembly/map_reads/flagstat/flagstat_results/*.flagstat
+*.flagstat
+m4b_binning/assembly/map_reads/flagstat/idxstat_results/
+*.idxstats
+m4b_binning/ftp.ncbi.nih.gov/
+m4b_binning/software_build/
+m4b_binning/tmp/
+
 *.log
 *.jobs
 *.swp
