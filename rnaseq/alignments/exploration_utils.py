@@ -3,6 +3,7 @@ import textwrap
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
+import os
 import re
 
 import pandas as pd
@@ -117,7 +118,7 @@ def plot_faceted(df, colname):
     return fig
 
 
-def prep_gene_cts(gene, counts):
+def prep_gene_cts(gene, counts, frac=True):
     """
     If frac=True, it's fraction relative to entire fastq counts, not to frac mapped. 
     """
@@ -173,10 +174,26 @@ def plot_faceted_gene(df, colname):
     return fig
 
 def plot_read_counts_by_product(gene, sample_info):
-    df = prep_gene_cts(gene, sample_info)
+    df = prep_gene_cts(gene, sample_info, frac=False)
     new_colname = 'RNA reads: {}'.format(gene)
     df.rename(columns={'RNA reads': new_colname}, inplace=True)
     p = plot_faceted_gene(df, new_colname)
-    fname = './figures/gene_reads/170213_read_counts_' + filename_cleaner(gene) + '.pdf'
+    fname = './figures/gene_reads/170222_read_counts_' + filename_cleaner(gene) + '.pdf'
+    print(fname)
+    p.savefig(fname, bbox_inches='tight')
+
+def plot_read_fracs_by_product(gene, sample_info, fignum=None):
+    df = prep_gene_cts(gene, sample_info, frac=True)
+    new_colname = 'frac RNA reads: {}'.format(gene)
+    df.rename(columns={'frac RNA-seq reads': new_colname}, inplace=True)
+    p = plot_faceted_gene(df, new_colname)
+    folder = './figures/gene_read_fracs/'
+    if not os.path.exists(folder):
+        os.mkdir(folder)
+    if fignum is not None:
+        fname = os.path.join(folder, '170222_read_fracs_' + str(fignum) + '_' + filename_cleaner(gene) + '.pdf')
+    else:
+        fname = os.path.join(folder, '170222_read_fracs_' + filename_cleaner(gene) + '.pdf')
+    #fname = './figures/gene_reads/170213_read_fracs_' + filename_cleaner(gene) + '.pdf'
     print(fname)
     p.savefig(fname, bbox_inches='tight')
