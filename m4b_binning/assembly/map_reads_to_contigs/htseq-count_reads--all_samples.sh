@@ -24,5 +24,7 @@ done
 # Function to run htseq-count on one sample: 
 # ls /work/m4b_binning/assembly/data/*OW*/*.fastq.gz | parallel --jobs 20 ./map_reads.sh {} /work/m4b_binning/assembly /longer_contigs/contigs_longer_than_1500bp.fa
 
-ls $1/*/*sorted.bam | parallel --jobs 30 ./htseq-count_reads.sh  {} $gff_path 
+#ls $1/*/*sorted.bam | parallel --jobs 30 ./htseq-count_reads.sh  {} $gff_path
+# Run more conservatively 170221
+ls $1/*/*sorted.bam | parallel --jobs 10 --results stdout_stderr_170221_{} --joblog joblog_170221 ./htseq-count_reads.sh  {} $gff_path
 
