@@ -74,6 +74,29 @@ def load_counts(rna_fastq=True):
         counts['frac RNA-seq reads'] = counts['RNA reads']/counts['RNA reads in fastq']
     return counts
 
+def load_frac_sums():
+    counts = load_counts()
+    frac_sums = counts.groupby('sample id')['frac RNA-seq reads'].sum()
+    frac_sums_merged = pd.merge(et_sample_info(), frac_sums.to_frame().reset_index())
+    return frac_sums
+
+def load_counts_w_processing():
+    unders = load_underscore_stats()
+    counts = load_counts()
+    frac_sums = counts.groupby('sample id')['frac RNA-seq reads'].sum()
+    frac_sums = frac_sums.reset_index().rename(
+                        columns={'frac RNA-seq reads':'sum(RNA-seq mapped to genes)'})
+    merged_df = pd.merge(unders, frac_sums, how='outer')
+
+    # check sums
+    merged_df['check sum'] = 0
+    cnames_to_sum = [c for c in merged_df.columns
+                     if (': __' in c) or (c == 'sum(RNA-seq mapped to genes)')]
+    for c in cnames_to_sum:
+        merged_df['check sum'] = merged_df['check sum'] + merged_df[c]
+
+    return merged_df
+
 def shorten_label(string, n):
     """
     E.g. 'frac of RNA reads: __no_feature', 20 --> 2 lines:
