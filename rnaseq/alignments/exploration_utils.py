@@ -3,6 +3,7 @@ import textwrap
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
+import itertools
 import os
 import re
 
@@ -117,14 +118,10 @@ def plot_faceted(df, colname):
     
     for (o2, rep), plot_df in df.groupby([facet_var, 'replicate']):
         plot_df.sort_values('week', inplace=True)
-        #print(df.head())
         ax = axs_dict[o2]
-        #print(ax)
         color = colors[rep]
-        #print(plot_df[y].head())
         ax.plot(plot_df[x], plot_df[y],
                 linestyle='-', marker='o', color=color, alpha = 0.8, label='rep {}'.format(rep))
-        #ax.plot(plot_df['week'], plot_df['sum'], linestyle='-', marker='o', color=color)
     for ax_num, ax in enumerate(axs):
         ax.set_xlabel(x)
         if len(y) > 20:
@@ -132,7 +129,6 @@ def plot_faceted(df, colname):
             ax.set_ylabel(ylabel)
         else:
             ax.set_ylabel(y)
-        #print(list(axs_dict.keys()))
         facet_label = list(axs_dict.keys())[ax_num]
         ax.set_title('{} {}'.format(facet_label, facet_var))
     plt.tight_layout()
@@ -151,18 +147,8 @@ def prep_gene_cts(gene, counts, frac=True):
     else:
         value = 'RNA reads'
     c = counts[counts['product'] == gene].groupby('sample id')[value].sum().reset_index()
-    print(c.shape)
-    print(c.head(2))
-    print(c.columns)
     c = pd.merge(c, sample_info)
     return c
-    #sample_info = get_sample_info()
-    #c = counts[counts['product'] == gene].groupby('sample id')['RNA reads'].sum().reset_index()
-    #print(c.shape)
-    #print(c.head(2))
-    #print(c.columns)
-    #c = pd.merge(c, sample_info)
-    #return c
 
 def plot_faceted_gene(df, colname):
     x = 'week'
@@ -176,21 +162,16 @@ def plot_faceted_gene(df, colname):
     
     for (facet_value, rep), plot_df in df.groupby([facet_var, 'replicate']):
         plot_df.sort_values('week', inplace=True)
-        #print(df.head())
         ax = axs_dict[facet_value]
-        #print(ax)
         color = colors[rep]
-        #print(plot_df[y].head())
         ax.plot(plot_df[x], plot_df[y],
                 linestyle='-', marker='o', color=color, alpha = 0.8, label='rep {}'.format(rep))
-        #ax.plot(plot_df['week'], plot_df['sum'], linestyle='-', marker='o', color=color)
         ax.set_title('{} {}'.format(facet_value, facet_var))
     for ax_num, ax in enumerate(axs):
         ax.set_xlabel(x)
         ax.set_ylabel('reads (RNA)')
     fig.suptitle(colname, fontsize=12)
     plt.subplots_adjust(top=0.85)
-    #plt.tight_layout()
     axs[0].legend(bbox_to_anchor=(1.25, 1.))
     plt.subplots_adjust(hspace=0.45)
     
@@ -217,6 +198,71 @@ def plot_read_fracs_by_product(gene, sample_info, fignum=None):
         fname = os.path.join(folder, '170222_read_fracs_' + str(fignum) + '_' + filename_cleaner(gene) + '.pdf')
     else:
         fname = os.path.join(folder, '170222_read_fracs_' + filename_cleaner(gene) + '.pdf')
-    #fname = './figures/gene_reads/170213_read_fracs_' + filename_cleaner(gene) + '.pdf'
     print(fname)
     p.savefig(fname, bbox_inches='tight')
+
+def plot_abundance_of_genes_with_same_names(gene_name, dataframe, fignum=None):
+    plot_df = dataframe[dataframe['product'] == gene_name]
+    print("plot {} in each series' box".format(
+        plot_df['locus'].drop_duplicates().shape[0]))
+    x='week'
+    y = 'frac RNA-seq reads'
+    
+    genes = plot_df.groupby('locus')[y].max().sort_values(
+        ascending=False).to_frame().reset_index()ead(8)['locus'].tolist()
+    top_genes = plot_df.groupby('locus')[y].max().sort_values(
+        ascending=False).to_frame().reset_index().head(8)['locus'].tolist()
+    
+    fig, axs = plt.subplots(2, 4, figsize=(15, 6), 
+                            sharex=True, sharey=True)
+    
+    axd = {('low', 1):axs[0, 0],
+           ('low', 2):axs[0, 1],
+           ('low', 3):axs[0, 2],
+           ('low', 4):axs[0, 3], 
+           ('high', 1):axs[1, 0],
+           ('high', 2):axs[1, 1],
+           ('high', 3):axs[1, 2],
+           ('high', 4):axs[1, 3]}
+    
+    palette = itertools.cycle(sns.color_palette("Set1", 8))
+
+    for locus, sub_df in plot_df.groupby('locus'):
+        c = next(palette)
+        sub_df = sub_df.copy()
+        sub_df.sort_values('week', ascending=False, inplace=True)
+        
+        for tup, sub_sub_df in sub_df.groupby(['oxygen', 'replicate']):
+
+            ax = axd[tup]
+            title = '{} O2, rep {}'.format(tup[0], tup[1])
+            ax.set_title(title)
+            
+            if locus in top_genes:
+                ax.plot(sub_sub_df[x], sub_sub_df[y], 
+                        label=locus, marker='o', color=c) 
+            else:
+                ax.plot(sub_sub_df[x], sub_sub_df[y], 
+                        label=locus, color=c) 
+        ax.set_xlabel(x)
+    fig.suptitle(gene_name, fontsize=16)
+    plt.subplots_adjust(top=0.85)
+    axs[0, 0].set_ylabel('fraction of fastq reads')
+    axs[1, 0].set_ylabel('fraction of fastq reads')
+    for axv in [0, 1, 2, 3]:
+        axs[1, axv].set_xlabel(x)
+            
+    axs[0, 3].legend(bbox_to_anchor=(2.7, 1.))
+
+    folder = './figures/expression_by_locus/'
+    if not os.path.exists(folder):
+        os.mkdir(folder)
+    if fignum is not None:
+        fname = os.path.join(folder, '170223_loci_read_fracs_' + str(fignum) + '_' + filename_cleaner(gene_name) + '.pdf')
+    else:
+        fname = os.path.join(folder, '170223_loci_read_fracs_' + filename_cleaner(gene_name) + '.pdf')
+
+    fig.savefig(fname, bbox_inches='tight')
+    return fig
+
+
