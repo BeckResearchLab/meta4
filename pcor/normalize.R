@@ -1,46 +1,45 @@
 library(DESeq2)
 
+sampleInfoPath = '/work/m4b_binning/assembly/data/sample_info/sample_info_w_cryptic.tsv'
+#[ec2-user@ip-10-0-0-158 sample_info]$ head -n 3 sample_info_w_cryptic.tsv
+#sample id       LakWas type name        sample number   cryptic metagenome name cryptic metatranscriptome name  oxygen  replicate       week    project
+#100_LOW12       LakWasM100_LOW12        100     8777.2.112196.ATCCTA    8903.5.115182.ATCCTA    low     4       12      1056214
+
 # Load in the un-normalized table with all samples and all organisms.  
-tsvFile <- '../assemble_summaries/summary.dat'
+tsvFile <- '/work/rnaseq/alignments/map_to_contigs_longer_than_1500bp/map_to_contigs_longer_than_1500bp.tsv'
+# with locus_tag and product: '/work/rnaseq/alignments/map_to_contigs_longer_than_1500bp/map_to_contigs_longer_than_1500bp_genes.tsv'
+# one without a product column:
+# /work/rnaseq/alignments/map_to_contigs_longer_than_1500bp/map_to_contigs_longer_than_1500bp.tsv 
 
-print(tsvFile)
-
-masterD <- read.table(tsvFile, sep="\t", header=T, quote="", row.names=2)
+# On Waffle, first and 2nd col names were genome	locus_tag	product
+# E.g. Acidovora-69x (UID4105) 	Ga0081644_10011	serine/threonine protein kinase
+# Row names have to be unique
+masterD <- read.table(tsvFile, sep="\t", header=T, quote="", row.names=1)
+sampleInfo <- read.table(sampleInfoPath, sep="\t", header=T, quote="", row.names=4)
 
 countData <- masterD
-head(countData)
+head(countData, 2)
 # Delete the genome and product columns; they aren't read counts and DESeq doesn't want them. 
-countData$genome <- NULL
-countData$product <- NULL
+#countData$genome <- NULL
+#countData$product <- NULL
 
 # remove all 0 rows
-# Was: (160226)
-# countData <- countData[rowSums(countData[, -1]) > 0, ]
+# meta4: dim(countData) --> [1] 921440     88
+# dim(countData[rowSums(countData) > 0, ]) --> [1] 754840     88
+countData <- countData[rowSums(countData) > 0, ]
 
-# the colnames at this point: 
-# > colnames(countData)
-#  [1] "LakWasM100_LOW12_2_rpkm" "LakWasMe97_LOW12_2_rpkm"
-#  [3] "LakWasMe98_LOW12_2_rpkm" "LakWasMe99_LOW12_2_rpkm"
-#  [5] "LakWasM104_HOW12_2_rpkm" "LakWasM105_HOW12_2_rpkm"
-# What happens when we do the `countData[, -1]` ?? 
-# Removes the first column.  This is NOT The desired behavior if both genome and product are set to NULL.
-head(countData)
+countData[0:5, 0:5]
 
 # Read in the experiment info; imperative for DESeq's normalization scheme. 
-# ---------FIX: added sample_info to current dir for development on local computer-----------------
-colData <- read.table("../sample_info.xls", sep="\t", header=T, quote="", row.names=1)
-#colData <- read.table("./sample_info.xls", sep="\t", header=T, quote="", row.names=1)
+colData <-  sampleInfo[, c('oxygen', 'week')]
 head(colData)
+# Need to convert 'week' into a factor. 
+# d$a <- factor(d$a)
+colData$week <- factor(colData$week)
 
 dds <- DESeqDataSetFromMatrix(countData = countData,
                               colData = colData,
-                              design = ~ week + O2)
-# remove rows with all zeros before applying DESeq. 
-dds <- dds[ rowSums(counts(dds)) > 1, ]
-#dds <- DESeq(dds)
-#res <- results(dds)
-#rld <- rlog(dds)
-#head(assay(rld), 3)
+                              design = ~ week + oxygen)
 vsd <- varianceStabilizingTransformation(dds)
 head(assay(vsd), 3)
 normCounts <- assay(vsd)
