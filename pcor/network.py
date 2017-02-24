@@ -7,11 +7,14 @@ import os
 import pickle
 import sys
 
+import matplotlib
+matplotlib.use('Agg')
+
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
 import pandas as pd
-import readline
+import readline # not used, but essential for rpy2 install
 from rpy2.robjects.packages import importr
 from rpy2.robjects.vectors import FloatVector
 from scipy import linalg
@@ -21,6 +24,8 @@ DATA_PICKLE = 'data.pkl'
 FILENAME = 'normalized_counts.tsv'
 PRUNE_GENES = 10000
 PDF_FILENAME = 'network.py.pdf'
+#NUM_ROWS_DEV_SCALE = 2487 # match prior Waffle run. 
+#NUM_ROWS_DEV_SCALE = 24870
 
 def main():
     '''
@@ -43,6 +48,13 @@ def main():
     else:
         print("reading in data from %s" % (FILENAME))
         df = pd.read_csv(FILENAME, sep='\t')
+
+        # TODO: remove this experimental data-trimming
+        #if NUM_ROWS_DEV_SCALE is not None:
+        #    old_shape = df.shape
+        #    df = df.iloc[0:NUM_ROWS_DEV_SCALE, ]
+        #    print('DEV MODE: TRIMED DATA FROM {} to {}'.format(old_shape, df.shape))
+
         print("found %d rows and %d columns" % (df.shape[0], df.shape[1]))
         # compute the row means and sort the data frame by descinding means
         df['row_means'] = df.mean(axis=1)
@@ -95,4 +107,8 @@ def main():
 
 
 if __name__ == "__main__":
+    # check that you aren't in a virtualenv. 
+    # In py2: sys.prefix == '/work/software/anaconda3/envs/py2'
+    # In system python: sys.prefix == '/work/software/anaconda3'
+    assert 'envs' not in sys.prefix, "Don't run this script from a virtualenv; R package issues arise.  Using {}".format(sys.prefix)
     main()
