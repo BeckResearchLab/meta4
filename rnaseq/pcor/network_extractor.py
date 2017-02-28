@@ -5,22 +5,23 @@ Co-occurence network from expression data.
 
 import os
 import pickle
+import readline
 import sys
 
 import matplotlib 
+# workaround for missing tkinter packages
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
 import pandas as pd
-import readline
 from rpy2.robjects.packages import importr
 from rpy2.robjects.vectors import FloatVector
 from scipy import linalg
 from sklearn.covariance import LedoitWolf
 
 DATA_PICKLE = 'data.pkl'
-FILENAME = 'network.py.tsv'
+FILENAME = 'network.tsv'
 
 def main():
     '''
@@ -44,7 +45,7 @@ def main():
     pcor = pmat[pcor_indices]
 
     # make dataframe network
-    network = pd.DataFrame({"geneA":df.index.values[pcor_indices[0]], "geneB":df.index.values[pcor_indices[1]], "pcor":pcor})
+    network = pd.DataFrame({"geneA":df.index.values[pcor_indices[0]], "geneB":df.index.values[pcor_indices[1]], "pcor":pcor, "lfdr_pcor":lfdr_pcor[1], "qval_pcor":lfdr_pcor[2]})
 
     network.to_csv(FILENAME, sep='\t', index=False)
 
