@@ -22,7 +22,7 @@ from sklearn.covariance import LedoitWolf
 
 DATA_PICKLE = 'data.pkl'
 FILENAME = 'normalized_counts.tsv'
-PRUNE_GENES = 10000
+#PRUNE_GENES = 10000
 PDF_FILENAME = 'network.py.pdf'
 #NUM_ROWS_DEV_SCALE = 2487 # match prior Waffle run. 
 #NUM_ROWS_DEV_SCALE = 24870
@@ -61,7 +61,7 @@ def main():
         df.sort_values('row_means', axis=0, ascending=False, inplace=True)
         df.drop('row_means', axis=1, inplace=True)
         # take the most abundant genes
-        df = df.head(PRUNE_GENES)
+        #df = df.head(PRUNE_GENES)
 
         # Ledoit-Wolf optimal shrinkage coefficient estimate
         print("computing Ledoit-Wolf optimal shrinkage coeffecient estimate")
@@ -110,5 +110,5 @@ if __name__ == "__main__":
     # check that you aren't in a virtualenv. 
     # In py2: sys.prefix == '/work/software/anaconda3/envs/py2'
     # In system python: sys.prefix == '/work/software/anaconda3'
-    assert 'envs' not in sys.prefix, "Don't run this script from a virtualenv; R package issues arise.  Using {}".format(sys.prefix)
+    #assert 'envs' not in sys.prefix, "Don't run this script from a virtualenv; R package issues arise.  Using {}".format(sys.prefix)
     main()
