@@ -18,6 +18,12 @@ masterD <- read.table(tsvFile, sep="\t", header=T, quote="", row.names=1)
 sampleInfo <- read.table(sampleInfoPath, sep="\t", header=T, quote="", row.names=4)
 
 countData <- masterD
+# Remove __ columns
+print('Remove __ type columns: ')
+print(tail(rownames(masterD), 10))
+countData <- countData[ ! grepl('__', rownames(masterD)), ]
+
+
 head(countData, 2)
 # Delete the genome and product columns; they aren't read counts and DESeq doesn't want them. 
 #countData$genome <- NULL
