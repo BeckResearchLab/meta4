@@ -1,5 +1,8 @@
-.ipynb_checkpoints/*
-__pycache__/*
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints
+
+
 .git--deprecated/
 m4b_binning/assembly/data/sample_info/read_counts.txt
 m4b_binning/assembly/data/sample_info/sample_info_w_cryptic.tsv
