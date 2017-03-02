@@ -24,7 +24,6 @@ from sklearn.covariance import LedoitWolf
 DATA_PICKLE = 'data.pkl'
 FILENAME = 'normalized_counts.tsv'
 #PRUNE_GENES = 10000
-PRUNE_MIN_READ_CUTOFF = 100
 PDF_FILENAME = 'network.py.pdf'
 #NUM_ROWS_DEV_SCALE = 2487 # match scale of prior Waffle run. 
 
@@ -55,15 +54,6 @@ def main():
         #    df = df.iloc[0:NUM_ROWS_DEV_SCALE, ]
         #    print('DEV MODE: TRIMED DATA FROM {} to {}'.format(old_shape, df.shape))
 
-        # Print trim out genes with expression > x over all samples. 
-        print('trim out genes with expression > {} over all samples.'.format(PRUNE_MIN_READ_CUTOFF))
-        df['read total by gene'] = df.sum(axis=1)
-        genes_before = df.shape[0]
-        df = df[df['read total by gene'] > PRUNE_MIN_READ_CUTOFF]
-        print('trimmed from {} genes to {} genes.  (Genes with > {} reads)'.format(
-            genes_before, df.shape[0], PRUNE_MIN_READ_CUTOFF))
-        del df['read total by gene']
-
         print("found %d rows and %d columns" % (df.shape[0], df.shape[1]))
         # compute the row means and sort the data frame by descinding means
         df['row_means'] = df.mean(axis=1)
@@ -79,7 +69,7 @@ def main():
         lwe = LedoitWolf().fit(df.transpose())
         end_time = datetime.now()
         total_time = end_time - start_time
-        print('LedoitWolf time for {} genes: '.format(df.shape[0], str(total_time)))
+        print('LedoitWolf time for {} genes: {}'.format(df.shape[0], str(total_time)))
 
         pmat = lwe.get_precision()
         # Convert symmetric matrix to array, first by getting indices
