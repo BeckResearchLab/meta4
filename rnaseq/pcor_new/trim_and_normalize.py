@@ -63,8 +63,7 @@ def load_and_drop_rare_features(min_percent):
     genes_to_keep = counts[sums > min_percent]
     print('trimmed genes to set with at least {}% of reads in at least one sample: '
           'shape {} --> {}'.format(min_percent, shape_before, genes_to_keep.shape))
-    genes_to_keep.to_csv('top_features_percent_of_fastq_reads.tsv', sep='\t')
-    return genes_to_keep
+    return genes_to_keep  # dataframe
 
 def plot_distribution(series):
     """
@@ -99,7 +98,6 @@ def normalize(counts):
     # now it is a numpy array. 
     # TODO: write out the column names to re-associate the results with features
     scaled_df = pd.DataFrame(counts, columns=counts.columns, index=counts.index)
-    scaled_df.to_csv('top_features_scaled--column_features.tsv', sep='\t')
     print('min value after scaling: {}'.format(scaled_df.min(axis=0).min()))
     print('max value after scaling: {}'.format(scaled_df.max(axis=0).max()))
     return scaled_df
@@ -166,7 +164,9 @@ if __name__ == '__main__':
     assert sys.version_info >= (3,0), 'this script expects python 3 to be used'
     
     important_gene_percents = load_and_drop_rare_features(min_percent=0.1)
-    genes_scaled_numpy = normalize(important_gene_percents.T)
+    important_gene_percents.to_csv('top_features_percent_of_fastq_reads.tsv', sep='\t')
+    genes_scaled = normalize(important_gene_percents.T)
+    genes_scaled.to_csv('top_features_scaled--column_features.tsv', sep='\t')
     #lw_pcors = 
     #graph_lasso(genes_scaled_numpy)
 
