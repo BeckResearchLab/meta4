@@ -115,6 +115,7 @@ def ledoit_wolf(scaled_features):
     print("computing Ledoit-Wolf optimal shrinkage coeffecient estimate")
     start_time = datetime.now()
     print('time: {}'.format(str(start_time)))
+    import pdb; pdb.set_trace()
     lwe = covariance.LedoitWolf().fit(scaled_features.as_matrix())
     end_time = datetime.now()
     total_time = end_time - start_time
@@ -124,7 +125,11 @@ def ledoit_wolf(scaled_features):
 def run_ledoit_wolf(genes_scaled, include_product_name_cols=False):
     print(genes_scaled.shape)
     lw = ledoit_wolf(genes_scaled)
+    # precision matrix is proportional to the partial correlation matrix. 
     pmat = lw.get_precision()
+    # These are precision values, not partial correlations (not in range [-1, 1]) 
+    #assert np.abs(prec).max() <= 1, 
+    #    'partial correlations need to have magnitude <= 1; found one with abs(pcor) = {}'.format(np.abs(prec).max())
     print(pmat.shape)
     pmat_df = pd.DataFrame(pmat, 
                            columns=genes_scaled.columns, 
@@ -132,24 +137,24 @@ def run_ledoit_wolf(genes_scaled, include_product_name_cols=False):
     # http://stackoverflow.com/questions/34417685/melt-the-upper-triangular-matrix-of-a-pandas-dataframe
     # upper_triangle_indices: np.triu(np.ones(pmat.shape), 1).astype(np.bool)
     # Set the lower triangle and diagonal to NaN
-    pcors = pmat_df.where(np.triu(np.ones(pmat_df.shape), 1).astype(np.bool))
-    pcors = pcors.stack().reset_index()
-    pcors.columns = ['gene A', 'gene B', 'pcor']
+    precision = pmat_df.where(np.triu(np.ones(pmat_df.shape), 1).astype(np.bool))
+    precision = precision.stack().reset_index()
+    precision.columns = ['gene A', 'gene B', 'pcor']
 
     # merge on gene products
-    print(pcors.head(2))
+    print(precision.head(2))
     if include_product_name_cols:
         gene_names = pd.read_csv(GENE_NAMES_PATH, sep='\t')
         for c in ['A', 'B']:
             gn = gene_names.copy()
             gn.rename(columns={'ID':'gene {}'.format(c), 
                                'product': 'product {}'.format(c)}, inplace=True)
-            pcors = pd.merge(pcors, gn)
+            precision = pd.merge(precision, gn)
     else: 
         print('not merging on gene product names, for the sake of memory.  See {}'.format(GENE_NAMES_PATH))
-    return pcors
+    return precision
 
-def ledoit_wolf_with_increasing_size(abundance_cutoff_list, dir='ledoit_wolf_pcors'):
+def ledoit_wolf_with_increasing_size(abundance_cutoff_list, dir='ledoit_wolf_precision'):
     if not os.path.exists(dir):
         os.mkdir(dir)
     # Loop through the selected values. 
@@ -159,11 +164,11 @@ def ledoit_wolf_with_increasing_size(abundance_cutoff_list, dir='ledoit_wolf_pco
         num_genes = important_genes.shape[0]
         normalized = normalize(important_genes.T)
         print('run ledoit wolf for abundance cutoff = {} ({} genes)'.format(ac, num_genes))
-        pcors = run_ledoit_wolf(normalized, include_product_name_cols=False) # gets to be a lot of memory!
-        filename = 'ledoit_wolf_pcors' + '_cutoff_{}--{}_genes.tsv'.format(ac, num_genes)
+        precision = run_ledoit_wolf(normalized, include_product_name_cols=False) # gets to be a lot of memory!
+        filename = 'ledoit_wolf_precision' + '_cutoff_{}--{}_genes.tsv'.format(ac, num_genes)
         filename = os.path.join(dir, filename)
         print('save results as filename: ', filename)
-        pcors.to_csv(filename, sep='\t')
+        precision.to_csv(filename, sep='\t')
         print('----------------------------------------------')
 
 
