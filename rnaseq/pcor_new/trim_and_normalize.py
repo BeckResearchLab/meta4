@@ -23,7 +23,12 @@ GENE_NAMES_PATH = '/work/m4b_binning/assembly/prokka/contigs/contigs_longer_than
 
 PLOT_DIR = './figures'
 
-def load_and_drop_rare_features(min_percent):
+def load_and_drop_rare_features(min_percent, plot_dist=True):
+    """
+    Load original counts tsv, divide counts by number of reads in RNA-seq fastq,
+    delete genes that aren't above min_percent in at least one sample,
+    and return it.
+    """
     # Load raw counts
     counts = pd.read_csv(RAW_DATA_PATH, sep='\t')
     # Remove underscor columns like __no_feature
@@ -56,7 +61,8 @@ def load_and_drop_rare_features(min_percent):
     counts = cT.T  # put the genes back as rows, not columns
     # `counts.sum(axis=1).max()`
     sums = counts.sum(axis=1)
-    plot_distribution(sums)
+    if plot_dist:
+        plot_distribution(sums)
 
     # trim out genes that don't represent at least x% of the reads in at least one sample 
     shape_before = counts.shape
@@ -115,7 +121,7 @@ def ledoit_wolf(scaled_features):
     print('LedoitWolf time for {} genes: {}'.format(scaled_features.shape[1], str(total_time)))
     return lwe
 
-def run_ledoit_wolf(genes_scaled):
+def run_ledoit_wolf(genes_scaled, include_product_name_cols=False):
     print(genes_scaled.shape)
     lw = ledoit_wolf(genes_scaled)
     pmat = lw.get_precision()
@@ -132,13 +138,33 @@ def run_ledoit_wolf(genes_scaled):
 
     # merge on gene products
     print(pcors.head(2))
-    gene_names = pd.read_csv(GENE_NAMES_PATH, sep='\t')
-    for c in ['A', 'B']:
-        gn = gene_names.copy()
-        gn.rename(columns={'ID':'gene {}'.format(c), 
-                           'product': 'product {}'.format(c)}, inplace=True)
-        pcors = pd.merge(pcors, gn)
+    if include_product_name_cols:
+        gene_names = pd.read_csv(GENE_NAMES_PATH, sep='\t')
+        for c in ['A', 'B']:
+            gn = gene_names.copy()
+            gn.rename(columns={'ID':'gene {}'.format(c), 
+                               'product': 'product {}'.format(c)}, inplace=True)
+            pcors = pd.merge(pcors, gn)
+    else: 
+        print('not merging on gene product names, for the sake of memory.  See {}'.format(GENE_NAMES_PATH))
     return pcors
+
+def ledoit_wolf_with_increasing_size(abundance_cutoff_list, dir='ledoit_wolf_pcors'):
+    if not os.path.exists(dir):
+        os.mkdir(dir)
+    # Loop through the selected values. 
+    for ac in abundance_cutoff_list:
+        print('start ledoit_wolf for genes with % abundance in at least one sample > {}'.format(ac))
+        important_genes = load_and_drop_rare_features(min_percent=ac, plot_dist=False)
+        num_genes = important_genes.shape[0]
+        normalized = normalize(important_genes.T)
+        print('run ledoit wolf for abundance cutoff = {} ({} genes)'.format(ac, num_genes))
+        pcors = run_ledoit_wolf(normalized, include_product_name_cols=False) # gets to be a lot of memory!
+        filename = 'ledoit_wolf_pcors' + '_cutoff_{}--{}_genes.tsv'.format(ac, num_genes)
+        filename = os.path.join(dir, filename)
+        print('save results as filename: ', filename)
+        pcors.to_csv(filename, sep='\t')
+        print('----------------------------------------------')
 
 
 def graph_lasso(scaled_features, alphas=10.0**np.arange(-3,0)):
