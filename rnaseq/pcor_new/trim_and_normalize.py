@@ -2,6 +2,7 @@ import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
 
+from datetime import datetime
 import itertools  # for color palette cycling
 import numpy as np
 import os
@@ -18,6 +19,8 @@ from sklearn import covariance
 
 RAW_DATA_PATH = '/work/rnaseq/alignments/map_to_contigs_longer_than_1500bp/map_to_contigs_longer_than_1500bp.tsv'
 FASTQ_READ_COUNTS_PATH = '/work/rnaseq/rna_fastq_read_counts.tsv' 
+GENE_NAMES_PATH = '/work/m4b_binning/assembly/prokka/contigs/contigs_longer_than_1500bp/contigs_longer_than_1500bp_gffs_concatenated.gff.genes.tsv'
+
 PLOT_DIR = './figures'
 
 def load_and_drop_rare_features(min_percent):
@@ -59,7 +62,7 @@ def load_and_drop_rare_features(min_percent):
     shape_before = counts.shape
     genes_to_keep = counts[sums > min_percent]
     print('trimmed genes to set with at least {}% of reads in at least one sample: '
-          'shape {} --> {}'.format(min_percent, shape_before, counts.shape))
+          'shape {} --> {}'.format(min_percent, shape_before, genes_to_keep.shape))
     genes_to_keep.to_csv('top_features_percent_of_fastq_reads.tsv', sep='\t')
     return genes_to_keep
 
@@ -77,6 +80,13 @@ def plot_distribution(series):
     ax.set_ylabel('number of genes')
     fig.savefig(figpath, bbox_inches='tight')
 
+def shuffle_cols(df):
+    """
+    Shuffle the columns of a dataframe, before cross-val sub-sampling
+    """
+    return df.sample(frac=1)
+    
+
 def normalize(counts):
     """
     normalize a counts matrix with samples as rows and genes as columns
@@ -92,14 +102,59 @@ def normalize(counts):
     scaled_df.to_csv('top_features_scaled--column_features.tsv', sep='\t')
     print('min value after scaling: {}'.format(scaled_df.min(axis=0).min()))
     print('max value after scaling: {}'.format(scaled_df.max(axis=0).max()))
-    return scaled
+    return scaled_df
+
+def ledoit_wolf(scaled_features):
+    # sklearn.covariance.LedoitWolf
+    # class sklearn.covariance.LedoitWolf(store_precision=True, assume_centered=False, block_size=1000)[source]
+    # Ledoit-Wolf optimal shrinkage coefficient estimate
+    print("computing Ledoit-Wolf optimal shrinkage coeffecient estimate")
+    start_time = datetime.now()
+    print('time: {}'.format(str(start_time)))
+    lwe = covariance.LedoitWolf().fit(scaled_features.as_matrix())
+    end_time = datetime.now()
+    total_time = end_time - start_time
+    print('LedoitWolf time for {} genes: {}'.format(scaled_features.shape[1], str(total_time)))
+    return lwe
+
+def run_ledoit_wolf(genes_scaled):
+    print(genes_scaled.shape)
+    lw = ledoit_wolf(genes_scaled)
+    pmat = lw.get_precision()
+    print(pmat.shape)
+    pmat_df = pd.DataFrame(pmat, 
+                           columns=genes_scaled.columns, 
+                           index=genes_scaled.columns)
+    # http://stackoverflow.com/questions/34417685/melt-the-upper-triangular-matrix-of-a-pandas-dataframe
+    # upper_triangle_indices: np.triu(np.ones(pmat.shape), 1).astype(np.bool)
+    # Set the lower triangle and diagonal to NaN
+    pcors = pmat_df.where(np.triu(np.ones(pmat_df.shape), 1).astype(np.bool))
+    pcors = pcors.stack().reset_index()
+    pcors.columns = ['gene A', 'gene B', 'pcor']
+
+    # merge on gene products
+    print(pcors.head(2))
+    gene_names = pd.read_csv(GENE_NAMES_PATH, sep='\t')
+    for c in ['A', 'B']:
+        gn = gene_names.copy()
+        gn.rename(columns={'ID':'gene {}'.format(c), 
+                           'product': 'product {}'.format(c)}, inplace=True)
+        pcors = pd.merge(pcors, gn)
+    return pcors
+
 
 def graph_lasso(scaled_features, alphas=10.0**np.arange(-3,0)):
     models=dict()
     for alpha in alphas:
+        print('try graph lasso with alpha = {}'.format(alpha))
         try:
+            start_time = datetime.now()
             gl = covariance.GraphLasso(assume_centered=False, verbose=True)
             gl.fit(scaled_features)
+            total_time = end_time - start_time
+            print('GraphLasso time for matrix with dim {}: {}'.format(
+                scaled_features.shape, str(total_time)))
+            print('finished alpha = {} without error'.format(alpha))
         except FloatingPointError:
             print("Failed at alpha = %s" % alpha)
     return models
@@ -112,6 +167,7 @@ if __name__ == '__main__':
     
     important_gene_percents = load_and_drop_rare_features(min_percent=0.1)
     genes_scaled_numpy = normalize(important_gene_percents.T)
+    #lw_pcors = 
     #graph_lasso(genes_scaled_numpy)
 
 
