@@ -60,7 +60,8 @@ def make_gene_table(gff_filename):
     raw['ID'] = raw['description'].str.extract('ID=([_A-z0-9]+);', expand=True)
     # Don't be as careful getting the gene products because we can go to the end of the line
     raw['product'] = raw['description'].str.extract('product=(.*)', expand=True)
-    raw[['ID', 'product']].to_csv(gff_filename + '.genes.tsv', sep='\t', index=False)
+    raw['bp'] = raw['stop'] - raw['start'] + 1
+    raw[['ID', 'product', 'bp']].to_csv(gff_filename + '.genes.tsv', sep='\t', index=False)
     
     
 
