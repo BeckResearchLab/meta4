@@ -2,7 +2,8 @@
 set -eu
 #set -eux
 
-echo "Script $0: count reads using grep '^@' | wc -l" 
+#echo "Script $0: count reads using grep '^@' | wc -l"  # OLD WAY
+echo "Script $0: count reads reads by dividing number of lines by 4" 
 
 test ! $# -eq 2 && {
 #test $# -lt 2 && {
@@ -28,11 +29,15 @@ do
 	# put the filename in without a new line:
 	echo -n "$fastq	" >> $RESULTS 
 	
+	# Count reads in the zipped .fastq
+	# OLD WAY: deprecated because fastq quality score line can start with @
 	# append the number of @ lines in the file:
-	count_command="zcat $fq | grep '^@' | wc -l >> $RESULTS "
+	# count_command="zcat $fq | grep '^@' | wc -l >> $RESULTS "
+	# NEW WAY:
+	count_command="echo $(zcat $fq | wc -l ) /4 | bc >> $RESULTS"
 	echo "count command: $count_command"
 	eval $count_command
 	
 done
 
-echo "done counting all reads in each fastq.gz file"
+echo "done counting all reads in each zipped fastq file"
