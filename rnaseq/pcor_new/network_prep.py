@@ -16,6 +16,8 @@ import seaborn as sns
 from sklearn.preprocessing import StandardScaler
 from sklearn import covariance
 
+import argparse
+
 
 RAW_DATA_PATH = '/work/rnaseq/alignments/map_to_contigs_longer_than_1500bp/map_to_contigs_longer_than_1500bp.tsv'
 FASTQ_READ_COUNTS_PATH = '/work/rnaseq/rna_fastq_read_counts.tsv' 
@@ -53,9 +55,11 @@ def load_and_drop_rare_features(min_percent, plot_dist=True):
     cT.set_index('sample', inplace=True)
     cT = cT.div(cT['fastq reads'], axis=0)
     cT = cT*100  # make it percentages
-    # if it worked, there should only be one unique value
+    # after dividing by the number of fastq reads, and multiplying by 100, the 'fastq reads' 
+    # column should now be 100 at every value. 
     assert cT['fastq reads'].drop_duplicates().shape[0] == 1, 'problem dividing by fastq reads'
     assert cT['fastq reads'].drop_duplicates().iloc[0] == 100, 'problem dividing by fastq reads'
+    # delete the column of 100s now. 
     del cT['fastq reads']
 
     counts = cT.T  # put the genes back as rows, not columns
@@ -102,7 +106,7 @@ def normalize(counts):
     ss = StandardScaler(with_mean=False, with_std=True) 
     scaled = ss.fit_transform(counts)  #shape [n_samples, n_features] 
     # now it is a numpy array. 
-    # TODO: write out the column names to re-associate the results with features
+    # Put the row and column names back on.
     scaled_df = pd.DataFrame(counts, columns=counts.columns, index=counts.index)
     print('min value after scaling: {}'.format(scaled_df.min(axis=0).min()))
     print('max value after scaling: {}'.format(scaled_df.max(axis=0).max()))
@@ -115,7 +119,6 @@ def ledoit_wolf(scaled_features):
     print("computing Ledoit-Wolf optimal shrinkage coeffecient estimate")
     start_time = datetime.now()
     print('time: {}'.format(str(start_time)))
-    import pdb; pdb.set_trace()
     lwe = covariance.LedoitWolf().fit(scaled_features.as_matrix())
     end_time = datetime.now()
     total_time = end_time - start_time
@@ -126,37 +129,41 @@ def run_ledoit_wolf(genes_scaled, include_product_name_cols=False):
     print(genes_scaled.shape)
     lw = ledoit_wolf(genes_scaled)
     # precision matrix is proportional to the partial correlation matrix. 
-    pmat = lw.get_precision()
+    prec = lw.get_precision()
     # These are precision values, not partial correlations (not in range [-1, 1]) 
-    #assert np.abs(prec).max() <= 1, 
-    #    'partial correlations need to have magnitude <= 1; found one with abs(pcor) = {}'.format(np.abs(prec).max())
-    print(pmat.shape)
-    pmat_df = pd.DataFrame(pmat, 
+    print(prec.shape)
+    prec_df = pd.DataFrame(prec, 
                            columns=genes_scaled.columns, 
                            index=genes_scaled.columns)
     # http://stackoverflow.com/questions/34417685/melt-the-upper-triangular-matrix-of-a-pandas-dataframe
-    # upper_triangle_indices: np.triu(np.ones(pmat.shape), 1).astype(np.bool)
+    # upper_triangle_indices: np.triu(np.ones(prec.shape), 1).astype(np.bool)
     # Set the lower triangle and diagonal to NaN
-    precision = pmat_df.where(np.triu(np.ones(pmat_df.shape), 1).astype(np.bool))
-    precision = precision.stack().reset_index()
-    precision.columns = ['gene A', 'gene B', 'pcor']
+    prec_triangle = prec_df.where(np.triu(np.ones(prec_df.shape), 1).astype(np.bool))
+    prec_triangle = prec_triangle.stack().reset_index()
+    prec_triangle.columns = ['gene A', 'gene B', 'pcor']
 
     # merge on gene products
-    print(precision.head(2))
+    print(prec_triangle.head(2))
     if include_product_name_cols:
+        print('merge on the gene names to the flattened triangle of precision matrix values.  Storage memory intensive!!')
+        print('show memory before merging on colnames:')
+        print(prec_triangle.info())
         gene_names = pd.read_csv(GENE_NAMES_PATH, sep='\t')
         for c in ['A', 'B']:
             gn = gene_names.copy()
             gn.rename(columns={'ID':'gene {}'.format(c), 
                                'product': 'product {}'.format(c)}, inplace=True)
-            precision = pd.merge(precision, gn)
+            prec_triangle = pd.merge(prec_triangle, gn)
+        print(prec_triangle.info())
     else: 
         print('not merging on gene product names, for the sake of memory.  See {}'.format(GENE_NAMES_PATH))
-    return precision
+        print('memory used:')
+        print(prec_triangle.info())
+    return prec_triangle
 
-def ledoit_wolf_with_increasing_size(abundance_cutoff_list, dir='ledoit_wolf_precision'):
-    if not os.path.exists(dir):
-        os.mkdir(dir)
+def ledoit_wolf_with_increasing_size(abundance_cutoff_list, dirname='ledoit_wolf_precision', include_product_name_cols=False):
+    if not os.path.exists(dirname):
+        os.mkdir(dirname)
     # Loop through the selected values. 
     for ac in abundance_cutoff_list:
         print('start ledoit_wolf for genes with % abundance in at least one sample > {}'.format(ac))
@@ -164,12 +171,13 @@ def ledoit_wolf_with_increasing_size(abundance_cutoff_list, dir='ledoit_wolf_pre
         num_genes = important_genes.shape[0]
         normalized = normalize(important_genes.T)
         print('run ledoit wolf for abundance cutoff = {} ({} genes)'.format(ac, num_genes))
-        precision = run_ledoit_wolf(normalized, include_product_name_cols=False) # gets to be a lot of memory!
+        precision = run_ledoit_wolf(normalized, include_product_name_cols=include_product_name_cols) # gets to be a lot of memory!
         filename = 'ledoit_wolf_precision' + '_cutoff_{}--{}_genes.tsv'.format(ac, num_genes)
-        filename = os.path.join(dir, filename)
+        filename = os.path.join(dirname, filename)
         print('save results as filename: ', filename)
         precision.to_csv(filename, sep='\t')
         print('----------------------------------------------')
+        sys.stdout.flush()
 
 
 def graph_lasso(scaled_features, alphas=10.0**np.arange(-3,0)):
@@ -189,17 +197,24 @@ def graph_lasso(scaled_features, alphas=10.0**np.arange(-3,0)):
     return models
     
 
-
-
 if __name__ == '__main__':
+
     assert sys.version_info >= (3,0), 'this script expects python 3 to be used'
+
+    # get args
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-l','--list', nargs='+', type=float, help='<Required> list of cutoffs to use', required=True)
+    parser.add_argument('-d','--dir_name', help='<Required> directory to store resulting tsv files in', required=True)
+    args = parser.parse_args()
     
-    important_gene_percents = load_and_drop_rare_features(min_percent=0.1)
-    important_gene_percents.to_csv('top_features_percent_of_fastq_reads.tsv', sep='\t')
-    genes_scaled = normalize(important_gene_percents.T)
-    genes_scaled.to_csv('top_features_scaled--column_features.tsv', sep='\t')
-    #lw_pcors = 
-    #graph_lasso(genes_scaled_numpy)
+    #
+    print('use cutoff values {}'.format(args.list))
+    print('save resultig tsv files to "{}"'.format(args.dir_name))
+    assert type(args.list[0]) == float, 'expected float but got {}'.format(type(args.list[0]))
 
-
-
+    # 1e-10 was shown to have all 754836 previously.
+    #cutoffs = [1, 0.1, 0.05, 0.01, 0.005, 0.001, 0.0005, 0.0001, 5e-4, 1e-4, 5e-5, 1e-5, 1e-10]
+    cutoffs = args.list
+    print('Run Ledoit Wolf on increasing data sizes, according to cutoffs {}'.format(cutoffs))
+    ledoit_wolf_with_increasing_size(cutoffs, dirname=args.dir_name, include_product_name_cols=False)
+    
