@@ -4,20 +4,19 @@ import pandas as pd
 import seaborn as sns
 
 # Need to use LaTeX to get italic fonts.
-rc('text', usetex=True)
 from matplotlib import rc
-rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
-# Need to use LaTeX to get italic fonts.
 rc('text', usetex=True)
-rc('font', family='sans-serif')
+rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
 # http://stackoverflow.com/questions/2537868/sans-serif-math-with-latex-in-matplotlib
 mpl.rcParams['text.latex.preamble'] = [
-       r'\usepackage{siunitx}',   # i need upright \micro symbols, but you need...
-       r'\sisetup{detect-all}',   # ...this to force siunitx to actually use your fonts
+#       r'\usepackage{siunitx}',   # i need upright \micro symbols, but you need...
+#       r'\sisetup{detect-all}',   # ...this to force siunitx to actually use your fonts
        r'\usepackage{helvet}',    # set the normal font here
        r'\usepackage{sansmath}',  # load up the sansmath so that math -> helvet
        r'\sansmath'               # <- tricky! -- gotta actually tell tex to use!
 ]
+# Seems to work better on AWS with Agg.
+mpl.use('Agg')
 
 
 def axd_portrait(axs):
@@ -53,7 +52,7 @@ def bar_facets_from_pivoted_df(input_df, x, order_list, color_list,
     given already-pivotd data.
 
     :param input_df: a dataframe that may or may not be pivoted before plotting
-    :param pre_pivoted: True if dataframe was already pivoted with columns representing the desired bars 
+    :param pre_pivoted: True if dataframe was already pivoted with columns representing the desired bars
     :param x: value to use as x in pivot (and plot)
     :param y: value to use as y (bar rectangle) in pivot and plot
     :param order_list: order to plot columns by.  Should correspond to color list.
@@ -72,6 +71,7 @@ def bar_facets_from_pivoted_df(input_df, x, order_list, color_list,
     for (o2, rep), plot_df in input_df.groupby(['oxygen', 'replicate']):
         ax = axd[(o2, rep)]
         ax.set_title(o2 + ' $\mathregular{O_2}$' + ' replicate {}'.format(rep))
+        #ax.set_title(o2 + ' oxygen' + ' replicate {}'.format(rep))
         plot_df.sort_values('week', inplace=True)
 
         if not pre_pivoted:
@@ -79,7 +79,7 @@ def bar_facets_from_pivoted_df(input_df, x, order_list, color_list,
             plot_df = plot_df.pivot(index='week', columns=x, values=y)
         else:
             plot_df = plot_df.set_index('week')
-        
+
         plot_df = plot_df[order_list]
         plot_df.plot.bar(stacked=True, ax=ax, legend=False, color=color_list)
 

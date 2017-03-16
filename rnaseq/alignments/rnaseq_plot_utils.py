@@ -1,4 +1,5 @@
 import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
@@ -10,6 +11,17 @@ from collections import OrderedDict # for plot order
 
 from plot_facets import bar_facets_from_pivoted_df
 from plot_facets import add_vline_to_all_subplots
+
+# Need to use LaTeX to get italic fonts.
+from matplotlib import rc
+rc('text', usetex=True)
+rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
+# http://stackoverflow.com/questions/2537868/sans-serif-math-with-latex-in-matplotlib
+mpl.rcParams['text.latex.preamble'] = [
+       r'\usepackage{helvet}',    # set the normal font here
+       r'\usepackage{sansmath}',  # load up the sansmath so that math -> helvet
+       r'\sansmath'               # <- tricky! -- gotta actually tell tex to use!
+]
 
 
 def plot_underscore_bars(input_df, filename=None, portrait=True):

@@ -24,10 +24,10 @@ def load_rna_fastq_read_counts():
     return df
 
 def load_unders():
-    # Load the underscore portion of the data. 
+    # Load the underscore portion of the data.
     unders = pd.read_csv(
-        #'./map_to_contigs_longer_than_1500bp/contigs_longer_than_1500bp_melted_underscores.tsv', 
-        './map_to_contigs_longer_than_1500bp/map_to_contigs_longer_than_1500bp_melted_underscores.tsv', 
+        #'./map_to_contigs_longer_than_1500bp/contigs_longer_than_1500bp_melted_underscores.tsv',
+        './map_to_contigs_longer_than_1500bp/map_to_contigs_longer_than_1500bp_melted_underscores.tsv',
         sep='\t')
     return unders
 
@@ -61,7 +61,7 @@ def load_underscore_stats(rna_fastq=True):
         for cname in underscore_cols:
             c_frac_name = 'frac of RNA reads: {}'.format(cname)
             unders_pivoted[c_frac_name] = unders_pivoted[cname]/unders_pivoted['RNA reads in fastq']
-        
+
     return unders_pivoted
 
 def load_counts(rna_fastq=True):
@@ -71,7 +71,7 @@ def load_counts(rna_fastq=True):
         fq = load_rna_fastq_read_counts()
         counts = pd.merge(counts, fq)
         # Make a column for the fraction of RNA-seq reads each gene reperesents.
-        # It is possible these do not sum to 1. 
+        # It is possible these do not sum to 1.
         counts['frac RNA-seq reads'] = counts['RNA reads']/counts['RNA reads in fastq']
     return counts
 
@@ -104,24 +104,24 @@ def load_counts_w_processing():
 def shorten_label(string, n):
     """
     Wrap lines of a long string, such that they are less than n characters wide.
-    For axis labels. 
+    For axis labels.
 
     E.g. 'frac of RNA reads: __no_feature', 20 --> 2 lines:
         frac of RNA reads:
         __no_feature
     """
     return textwrap.fill(string, n)
-   
+
 def plot_faceted(df, colname):
     x = 'week'
     y = colname
     fig, axs = plt.subplots(2, 1, figsize=(6, 4), sharex=True, sharey=True)
-    
+
     facet_var = 'oxygen'
-    
+
     axs_dict = {'low': axs[0], 'high': axs[1]}
     colors = {1:'#66c2a5', 2:'#fc8d62', 3:'#8da0cb', 4:'#e78ac3'}
-    
+
     for (o2, rep), plot_df in df.groupby([facet_var, 'replicate']):
         plot_df.sort_values('week', inplace=True)
         ax = axs_dict[o2]
@@ -131,7 +131,7 @@ def plot_faceted(df, colname):
     for ax_num, ax in enumerate(axs):
         ax.set_xlabel(x)
         if len(y) > 20:
-            ylabel = shorten_label(y, 20) 
+            ylabel = shorten_label(y, 20)
             ax.set_ylabel(ylabel)
         else:
             ax.set_ylabel(y)
@@ -139,13 +139,13 @@ def plot_faceted(df, colname):
         ax.set_title('{} {}'.format(facet_label, facet_var))
     plt.tight_layout()
     axs[0].legend(bbox_to_anchor=(1.25, 1.))
-    
+
     return fig
 
 
 def prep_gene_cts(gene, counts, frac=True):
     """
-    If frac=True, it's fraction relative to entire fastq counts, not to frac mapped. 
+    If frac=True, it's fraction relative to entire fastq counts, not to frac mapped.
     """
     sample_info = get_sample_info()
     if frac:
@@ -160,12 +160,12 @@ def plot_faceted_gene(df, colname):
     x = 'week'
     y = colname
     fig, axs = plt.subplots(2, 1, figsize=(6, 4), sharex=True, sharey=True)
-    
+
     facet_var = 'oxygen'
-    
+
     axs_dict = {'low': axs[0], 'high': axs[1]}
     colors = {1:'#66c2a5', 2:'#fc8d62', 3:'#8da0cb', 4:'#e78ac3'}
-    
+
     for (facet_value, rep), plot_df in df.groupby([facet_var, 'replicate']):
         plot_df.sort_values('week', inplace=True)
         ax = axs_dict[facet_value]
@@ -180,7 +180,7 @@ def plot_faceted_gene(df, colname):
     plt.subplots_adjust(top=0.85)
     axs[0].legend(bbox_to_anchor=(1.25, 1.))
     plt.subplots_adjust(hspace=0.45)
-    
+
     return fig
 
 def plot_read_counts_by_product(gene, sample_info):
@@ -209,47 +209,49 @@ def plot_read_fracs_by_product(gene, sample_info, fignum=None):
 
 def plot_abundance_of_genes_with_same_names(gene_name, dataframe, fignum=None):
     plot_df = dataframe[dataframe['product'] == gene_name]
+    plot_df['latex contig name'] = r'\mbox{' + plot_df['locus'] + r'}'
+    plot_df['latex contig name'] = plot_df['latex contig name'].str.replace('_', '\_')
     print("plot {} in each series' box".format(
         plot_df['locus'].drop_duplicates().shape[0]))
     x='week'
     y = 'frac RNA-seq reads'
-    
-    genes = plot_df.groupby('locus')[y].max().sort_values(
+
+    genes = plot_df.groupby('latex contig name')[y].max().sort_values(
         ascending=False).to_frame().reset_index()
-    top_genes = plot_df.groupby('locus')[y].max().sort_values(
-        ascending=False).to_frame().reset_index().head(8)['locus'].tolist()
-    
-    fig, axs = plt.subplots(2, 4, figsize=(15, 6), 
+    top_genes = plot_df.groupby('latex contig name')[y].max().sort_values(
+        ascending=False).to_frame().reset_index().head(8)['latex contig name'].tolist()
+
+    fig, axs = plt.subplots(2, 4, figsize=(15, 6),
                             sharex=True, sharey=True)
-    
+
     axd = {('low', 1):axs[0, 0],
            ('low', 2):axs[0, 1],
            ('low', 3):axs[0, 2],
-           ('low', 4):axs[0, 3], 
+           ('low', 4):axs[0, 3],
            ('high', 1):axs[1, 0],
            ('high', 2):axs[1, 1],
            ('high', 3):axs[1, 2],
            ('high', 4):axs[1, 3]}
-    
+
     palette = itertools.cycle(sns.color_palette("Set1", 8))
 
-    for locus, sub_df in plot_df.groupby('locus'):
+    for locus, sub_df in plot_df.groupby('latex contig name'):
         c = next(palette)
         sub_df = sub_df.copy()
         sub_df.sort_values('week', ascending=False, inplace=True)
-        
+
         for tup, sub_sub_df in sub_df.groupby(['oxygen', 'replicate']):
 
             ax = axd[tup]
             title = '{} O2, rep {}'.format(tup[0], tup[1])
             ax.set_title(title)
-            
+
             if locus in top_genes:
-                ax.plot(sub_sub_df[x], sub_sub_df[y], 
-                        label=locus, marker='o', color=c) 
+                ax.plot(sub_sub_df[x], sub_sub_df[y],
+                        label=locus, marker='o', color=c)
             else:
-                ax.plot(sub_sub_df[x], sub_sub_df[y], 
-                        label=locus, color=c) 
+                ax.plot(sub_sub_df[x], sub_sub_df[y],
+                        label=locus, color=c)
         ax.set_xlabel(x)
     fig.suptitle(gene_name, fontsize=16)
     plt.subplots_adjust(top=0.85)
@@ -257,7 +259,7 @@ def plot_abundance_of_genes_with_same_names(gene_name, dataframe, fignum=None):
     axs[1, 0].set_ylabel('fraction of fastq reads')
     for axv in [0, 1, 2, 3]:
         axs[1, axv].set_xlabel(x)
-            
+
     axs[0, 3].legend(bbox_to_anchor=(2.7, 1.))
 
     folder = './figures/expression_by_locus/'
