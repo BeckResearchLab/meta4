@@ -31,13 +31,19 @@ def load_and_drop_rare_features(min_percent, plot_dist=True):
     delete genes that aren't above min_percent in at least one sample,
     and return it.
     """
+
     # Load raw counts
     counts = pd.read_csv(RAW_DATA_PATH, sep='\t')
+
     # Remove underscor columns like __no_feature
     underscores = [c for c in counts['locus'] if '__' in c]
     genes_before = counts.shape[0]
     counts = counts[ ~ counts['locus'].isin(underscores)]
     print('removed {} rows corresponding to htseq-count __ columns like __no_feature'.format(genes_before - counts.shape[0]))
+
+    # trim gene names for storage
+    # 'contigs_longer_than_1500bp_group_1_01474' --> '1_01474'
+    counts['locus'] = counts['locus'].str.extract('[_A-z]+_([0-9]+_[0-9]+)', expand=True)
 
     fastq_counts = pd.read_csv(FASTQ_READ_COUNTS_PATH, sep='\t', names=['sample', 'fastq reads'])
     # remove the.fastq.gz suffix:
