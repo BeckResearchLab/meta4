@@ -82,17 +82,20 @@ def load_frac_sums():
     return frac_sums
 
 def load_counts_w_processing():
+    """
+    Takes a few minutes...
+    """
     unders = load_underscore_stats()
     counts = load_counts()
     frac_sums = counts.groupby('sample id')['frac RNA-seq reads'].sum()
     frac_sums = frac_sums.reset_index().rename(
-                        columns={'frac RNA-seq reads':'sum(RNA-seq mapped to genes)'})
+                        columns={'frac RNA-seq reads':'sum(frac RNA-seq mapped to genes)'})
     merged_df = pd.merge(unders, frac_sums, how='outer')
 
     # check sums
     merged_df['check sum'] = 0
     cnames_to_sum = [c for c in merged_df.columns
-                     if (': __' in c) or (c == 'sum(RNA-seq mapped to genes)')]
+                     if (': __' in c) or (c == 'sum(frac RNA-seq mapped to genes)')]
     for c in cnames_to_sum:
         merged_df['check sum'] = merged_df['check sum'] + merged_df[c]
 
@@ -100,6 +103,9 @@ def load_counts_w_processing():
 
 def shorten_label(string, n):
     """
+    Wrap lines of a long string, such that they are less than n characters wide.
+    For axis labels. 
+
     E.g. 'frac of RNA reads: __no_feature', 20 --> 2 lines:
         frac of RNA reads:
         __no_feature
@@ -209,7 +215,7 @@ def plot_abundance_of_genes_with_same_names(gene_name, dataframe, fignum=None):
     y = 'frac RNA-seq reads'
     
     genes = plot_df.groupby('locus')[y].max().sort_values(
-        ascending=False).to_frame().reset_index()ead(8)['locus'].tolist()
+        ascending=False).to_frame().reset_index()
     top_genes = plot_df.groupby('locus')[y].max().sort_values(
         ascending=False).to_frame().reset_index().head(8)['locus'].tolist()
     
