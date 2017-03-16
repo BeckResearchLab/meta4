@@ -60,7 +60,8 @@ def bar_facets_from_pivoted_df(input_df, x, order_list, color_list,
 
     for (o2, rep), plot_df in input_df.groupby(['oxygen', 'replicate']):
         ax = axd[(o2, rep)]
-        ax.set_title('{} oxygen, replicate {}'.format(o2, rep))
+        ax.set_title(o2 + ' $\mathregular{O_2}$' + ' replicate {}'.format(rep))
+        plot_df.sort_values('week', inplace=True)
 
         if not pre_pivoted:
             assert y is not None, "need to specify fill value for pivot"
