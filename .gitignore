@@ -1,3 +1,15 @@
+rnaseq/pcor_old/results*
+rnaseq/pcor_old/*.stdouterr
+rnaseq/pcor_old/*.tsv
+rnaseq/*.tsv
+rnaseq/pcor_new/old/*
+rnaseq/pcor_new/*.tsv
+rnaseq/pcor_new/Ledoit_Wolf_60GB_result/
+rnaseq/pcor_new/Ledoit_Wolf_large_instance_result--un-trimmed_names/
+rnaseq/pcor_new/Ledoit_Wolf_r4.8xlarge_244GB_memory/
+rnaseq/pcor_new/ledoit_wolf_precision_60GB_ram_OLD/
+rnaseq/pcor_new/trimmed_training_data/
+
 __pycache__/
 *.py[cod]
 .ipynb_checkpoints
