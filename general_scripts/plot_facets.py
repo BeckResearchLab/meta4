@@ -1,7 +1,11 @@
 import matplotlib as mpl
+# Seems to work better on AWS with Agg.
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+
+from functools import partial
 
 # Need to use LaTeX to get italic fonts.
 from matplotlib import rc
@@ -15,8 +19,6 @@ mpl.rcParams['text.latex.preamble'] = [
        r'\usepackage{sansmath}',  # load up the sansmath so that math -> helvet
        r'\sansmath'               # <- tricky! -- gotta actually tell tex to use!
 ]
-# Seems to work better on AWS with Agg.
-mpl.use('Agg')
 
 
 def axd_portrait(axs):
@@ -44,20 +46,28 @@ def add_vline_to_all_subplots(fig, x, ymin, ymax, color='#636363'):
     return fig
 
 
-def bar_facets_from_pivoted_df(input_df, x, order_list, color_list,
-                               y=None, pre_pivoted=True,
-                               filename=None, portrait=True):
+def plot_bar(plot_df, ax, pre_pivoted, color_list, order_list):
+
+    if not pre_pivoted:
+        assert y is not None, "need to specify fill value for pivot"
+        plot_df = plot_df.pivot(index='week', columns=x, values=y)
+    else:
+        plot_df = plot_df.set_index('week')
+
+    plot_df = plot_df[order_list]
+
+    return plot_df.plot.bar(stacked=True, ax=ax, legend=False, color=color_list)
+
+
+
+def plot_facets(input_df, plot_function, portrait=True):
     """
     General function to produce faceted plots (O2 vs rep or vice versa)
     given already-pivotd data.
 
     :param input_df: a dataframe that may or may not be pivoted before plotting
-    :param pre_pivoted: True if dataframe was already pivoted with columns representing the desired bars
-    :param x: value to use as x in pivot (and plot)
-    :param y: value to use as y (bar rectangle) in pivot and plot
-    :param order_list: order to plot columns by.  Should correspond to color list.
+    :param plot_function: plot function to use
     :param color_list: list of hex (or RGB?) colors to use
-    :param filename: filename to save the file with
     :param portrait: True if tall is desired, or False if short
     :return:
     """
@@ -74,14 +84,8 @@ def bar_facets_from_pivoted_df(input_df, x, order_list, color_list,
         #ax.set_title(o2 + ' oxygen' + ' replicate {}'.format(rep))
         plot_df.sort_values('week', inplace=True)
 
-        if not pre_pivoted:
-            assert y is not None, "need to specify fill value for pivot"
-            plot_df = plot_df.pivot(index='week', columns=x, values=y)
-        else:
-            plot_df = plot_df.set_index('week')
-
-        plot_df = plot_df[order_list]
-        plot_df.plot.bar(stacked=True, ax=ax, legend=False, color=color_list)
+        plot_function(plot_df, ax)
+        #plot_df.plot.bar(stacked=True, ax=ax, legend=False, color=color_list)
 
     if portrait:
         # prevent subplot overlaps: set width, height to leave between subplots.
@@ -99,6 +103,20 @@ def bar_facets_from_pivoted_df(input_df, x, order_list, color_list,
         ax.set_ylabel('fractional abundance')
 
     return fig
+
+
+def bar_facets_from_pivoted_df(input_df, x, order_list, color_list,
+                               y=None, pre_pivoted=True,
+                               filename=None, portrait=True):
+    """
+
+    :param order_list: order to plot columns by.  Should correspond to color list.
+    :param pre_pivoted: True if dataframe was already pivoted with columns representing the desired bars
+    """
+    plot_function = partial(plot_bar, pre_pivoted=pre_pivoted, color_list=color_list, order_list=order_list)
+    plot = plot_facets(input_df, plot_function=plot_function, portrait=True)
+    return plot
+
 
 
 
