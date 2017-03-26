@@ -21,6 +21,9 @@ mpl.rcParams['text.latex.preamble'] = [
 ]
 
 
+REPLICATE_COLOR_DICT = {1:'#66c2a5', 2:'#fc8d62', 3:'#8da0cb', 4:'#e78ac3'}
+
+
 def axd_portrait(axs):
     """
     axis dictionary for portrait pages.
@@ -46,7 +49,10 @@ def add_vline_to_all_subplots(fig, x, ymin, ymax, color='#636363'):
     return fig
 
 
-def plot_bar(plot_df, ax, pre_pivoted, color_list, order_list):
+def plot_bar(plot_df, ax, pre_pivoted, colors, order_list):
+    """
+    :colors: a list of colors
+    """
 
     if not pre_pivoted:
         assert y is not None, "need to specify fill value for pivot"
@@ -56,18 +62,27 @@ def plot_bar(plot_df, ax, pre_pivoted, color_list, order_list):
 
     plot_df = plot_df[order_list]
 
-    return plot_df.plot.bar(stacked=True, ax=ax, legend=False, color=color_list)
+    return plot_df.plot.bar(stacked=True, ax=ax, legend=False, color=colors)
 
 
-
-def plot_facets(input_df, plot_function, portrait=True):
+def plot_multiple_series(df, groupby_var, color_dict, plot_function_partial, ax):
     """
-    General function to produce faceted plots (O2 vs rep or vice versa)
+    Loop through all the series and plot.
+    """
+    for tup, plot_df in df.groupby(groupby_var):
+        plot_df.sort_values('week')
+        color = color_dict[tup]
+        plot_function_partial(plot_df, color=color, ax=ax)
+
+
+def plot_facets(input_df, plot_function, colors, multiple_series=False, portrait=True, facets=8):
+    """
+    General function to produce faceted plots (O2 vs rep or vice vers_dict)
     given already-pivotd data.
 
     :param input_df: a dataframe that may or may not be pivoted before plotting
     :param plot_function: plot function to use
-    :param color_list: list of hex (or RGB?) colors to use
+    :param colors: list of hex (or RGB?) colors to use, or a dict of coolors if multiple_series=True
     :param portrait: True if tall is desired, or False if short
     :return:
     """
@@ -84,8 +99,11 @@ def plot_facets(input_df, plot_function, portrait=True):
         #ax.set_title(o2 + ' oxygen' + ' replicate {}'.format(rep))
         plot_df.sort_values('week', inplace=True)
 
-        plot_function(plot_df, ax)
-        #plot_df.plot.bar(stacked=True, ax=ax, legend=False, color=color_list)
+        if multiple_series:
+            plot_multiple_series(plot_function_partial=plot_function, df=plot_df,
+                                 ax=ax, groupby_var='replicate', color_dict=colors)
+        else:
+            plot_function(plot_df=plot_df, ax=ax, colors=colors)
 
     if portrait:
         # prevent subplot overlaps: set width, height to leave between subplots.
@@ -106,41 +124,25 @@ def plot_facets(input_df, plot_function, portrait=True):
 
 
 def bar_facets_from_pivoted_df(input_df, x, order_list, color_list,
-                               y=None, pre_pivoted=True,
+                               y=None, pre_pivoted=True, mulitple_series=False,
                                filename=None, portrait=True):
     """
 
     :param order_list: order to plot columns by.  Should correspond to color list.
     :param pre_pivoted: True if dataframe was already pivoted with columns representing the desired bars
     """
-    plot_function = partial(plot_bar, pre_pivoted=pre_pivoted, color_list=color_list, order_list=order_list)
-    plot = plot_facets(input_df, plot_function=plot_function, portrait=True)
+    plot_function = partial(plot_bar, pre_pivoted=pre_pivoted, order_list=order_list)
+    plot = plot_facets(input_df, plot_function=plot_function, colors=color_list, portrait=True)
     return plot
 
 
+def plot_scatter(plot_df, ax, x, y, color, marker='o', linestyle='-'):
+    ax.plot(plot_df[x], plot_df[y], color=color, marker=marker, linestyle=linestyle)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+def plot_facets_scatter(input_df, x, y, marker, linestyle, color_dict=REPLICATE_COLOR_DICT):
+    plot_function = partial(plot_scatter, x=x, y=y, marker=marker, linestyle=linestyle)
+    plot = plot_facets(input_df, plot_function=plot_function, colors=color_dict, portrait=True, multiple_series=True)
+    return plot
 
 
