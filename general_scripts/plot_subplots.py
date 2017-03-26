@@ -67,18 +67,27 @@ def plot_bar(plot_df, ax, pre_pivoted, colors, order_list):
     return plot_df.plot.bar(stacked=True, ax=ax, legend=False, color=colors)
 
 
-def plot_multiple_series(df, groupby_var, color_dict, plot_function_partial, ax):
+def plot_multiple_series(df, groupby_var, color_dict, plot_function_partial, ax,
+                         label_base=None):
     """
     Loop through all the series and plot.
     """
     for tup, plot_df in df.groupby(groupby_var):
         plot_df.sort_values('week')
         color = color_dict[tup]
-        plot_function_partial(plot_df, color=color, ax=ax, label=tup)
+
+        if label_base is not None:
+            label = label_generator(label_base, tup)
+        else:
+            label = tup
+
+        plot_function_partial(plot_df, color=color, ax=ax, label=label)
 
 
-def plot_subplots(input_df, plot_function, colors, multiple_series=False,
-                  portrait=True, subplots=8, legend_title=None):
+def plot_subplots(input_df, plot_function, ylabel, colors,
+                  multiple_series=False, label_base=None,
+                  portrait=True, subplots=8, legend_title=None,
+                  prev_axs_and_axd=None):
     """
     General function to produce faceted plots (O2 vs rep or vice vers_dict)
     given already-pivotd data.
@@ -91,7 +100,7 @@ def plot_subplots(input_df, plot_function, colors, multiple_series=False,
     :legend title: title to use for legend, if desired
     :return:
     """
-    if portrait:
+    if portrait and prev_axs_and_axd is None:
         if subplots == 8:
             fig, axs = plt.subplots(4, 2, figsize=(10,10))
         elif subplots == 2:
@@ -101,7 +110,7 @@ def plot_subplots(input_df, plot_function, colors, multiple_series=False,
         else:
             print('only 8 or 2 subplots are currently supported')
             return
-    else:
+    elif not portrait and prev_axs_and_axd is None:
         if subplots == 8:
             fig, axs = plt.subplots(2, 4, figsize=(14,8))
         elif subplots == 2:
@@ -110,7 +119,11 @@ def plot_subplots(input_df, plot_function, colors, multiple_series=False,
         else:
             print('only 8 or 2 subplots are currently supported')
             return
-    axd = make_axd(axs, portrait=portrait, subplots=subplots)
+    if prev_axs_and_axd is None:
+        axd = make_axd(axs, portrait=portrait, subplots=subplots)
+    else:
+        axs = prev_axs_and_axd[0]
+        axd = prev_axs_and_axd[1]
 
     if subplots == 8:
         groupby_tuples = (['oxygen', 'replicate'])
@@ -133,7 +146,8 @@ def plot_subplots(input_df, plot_function, colors, multiple_series=False,
 
         if multiple_series:
             plot_multiple_series(plot_function_partial=plot_function, df=plot_df,
-                                 ax=ax, groupby_var='replicate', color_dict=colors)
+                                 ax=ax, groupby_var='replicate', color_dict=colors,
+                                 label_base=label_base)
         else:
             plot_function(plot_df=plot_df, ax=ax, colors=colors)
 
@@ -144,7 +158,7 @@ def plot_subplots(input_df, plot_function, colors, multiple_series=False,
         if subplots == 8:
             axd[('high', 1)].legend(loc=(1.05, 0.4), title=legend_title)
         elif subplots == 2:
-            axd['low'].legend(loc=(1.05, 0.4), title=legend_title)
+            axd['low'].legend(loc=(1.05, 0.2), title=legend_title)
     else:
         # prevent subplot overlaps: set width, height to leave between subplots.
         plt.subplots_adjust(wspace = 0.3, hspace = 0.3)
@@ -152,20 +166,23 @@ def plot_subplots(input_df, plot_function, colors, multiple_series=False,
         if subplots == 8:
             axd[('low', 4)].legend(loc=(1.05, 0.4), title=legend_title)
         elif subplots == 2:
-            axd['high'].legend(loc=(1.05, 0.4), title=legend_title)
+            axd['high'].legend(loc=(1.05, 0.2), title=legend_title)
 
     # put labels up the left side.
     if subplots > 2:
         for ax in axs[:, 0]:
-            ax.set_ylabel('fractional abundance')
+            ax.set_ylabel(ylabel)
     else:
         for ax in axs:
-            ax.set_ylabel('fractional abundance')
+            ax.set_ylabel(ylabel)
 
-    return fig
+    if prev_axs_and_axd is None:
+        return fig
+    else:
+        return
 
 
-def bar_subplots_from_pivoted_df(input_df, x, order_list, color_list,
+def bar_subplots_from_pivoted_df(input_df, x, ylabel, order_list, color_list,
                                y=None, pre_pivoted=True, mulitple_series=False,
                                filename=None, portrait=True, legend_title=None):
     """
@@ -174,21 +191,28 @@ def bar_subplots_from_pivoted_df(input_df, x, order_list, color_list,
     :param pre_pivoted: True if dataframe was already pivoted with columns representing the desired bars
     """
     plot_function = partial(plot_bar, pre_pivoted=pre_pivoted, order_list=order_list)
-    plot = plot_subplots(input_df, plot_function=plot_function, colors=color_list, portrait=portrait,
+    plot = plot_subplots(input_df, plot_function=plot_function, ylabel=ylabel,
+                         colors=color_list, portrait=portrait,
                          legend_title=legend_title)
     return plot
 
 
-def plot_scatter(plot_df, ax, x, y, label, color, marker='o', linestyle='-'):
+def label_generator(base_string, string_to_replace_XX_with):
+    return base_string.replace('XX', str(string_to_replace_XX_with))
+
+
+def plot_scatter(plot_df, ax, x, y, color, marker='o', linestyle='-', alpha=1,
+                 label=None, label_generator_info=None):
     ax.plot(plot_df[x], plot_df[y], color=color, marker=marker,
-            linestyle=linestyle, label=label)
+            linestyle=linestyle, label=label, alpha=alpha)
 
 
-def plot_subplots_scatter(input_df, x, y, marker, linestyle,
+def plot_subplots_scatter(input_df, x, y, ylabel, marker, linestyle,
                           color_dict=REPLICATE_COLOR_DICT, portrait=True, subplots=2):
     plot_function = partial(plot_scatter, x=x, y=y, marker=marker, linestyle=linestyle)
-    plot = plot_subplots(input_df, plot_function=plot_function, colors=color_dict,
+    plot = plot_subplots(input_df, plot_function=plot_function, ylabel=ylabel, colors=color_dict,
                          portrait=portrait, multiple_series=True, subplots=2, legend_title='replicate')
     return plot
+
 
 
