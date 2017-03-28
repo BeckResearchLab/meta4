@@ -85,7 +85,7 @@ def plot_multiple_series(df, groupby_var, color_dict, plot_function_partial, ax,
 
 
 def plot_subplots(input_df, plot_function, ylabel, colors,
-                  multiple_series=False, label_base=None,
+                  multiple_series=False, label_base=None, label=None,
                   portrait=True, subplots=8, legend_title=None,
                   prev_axs_and_axd=None):
     """
@@ -102,10 +102,10 @@ def plot_subplots(input_df, plot_function, ylabel, colors,
     """
     if portrait and prev_axs_and_axd is None:
         if subplots == 8:
-            fig, axs = plt.subplots(4, 2, figsize=(10,10))
+            fig, axs = plt.subplots(4, 2, figsize=(10,10), sharex=True, sharey=True)
         elif subplots == 2:
             print('make it portrait')
-            fig, axs = plt.subplots(2, 1, figsize=(3.5, 7))
+            fig, axs = plt.subplots(2, 1, figsize=(3.5, 7), sharex=True, sharey=True)
             #plt.subplots_adjust(hspace=0.1)
         else:
             print('only 8 or 2 subplots are currently supported')
@@ -125,20 +125,29 @@ def plot_subplots(input_df, plot_function, ylabel, colors,
         axs = prev_axs_and_axd[0]
         axd = prev_axs_and_axd[1]
 
+    if subplots == 8 and portrait:
+        axs[3,0].set_xlabel('week')
+        axs[3,1].set_xlabel('week')
+    elif subplots == 8 and not portrait:
+        for x in [0, 1, 2, 3]:
+                axs[0,x].set_xlabel('week')
+
     if subplots == 8:
         groupby_tuples = (['oxygen', 'replicate'])
     elif subplots == 2:
         groupby_tuples = ('oxygen')
 
     for tup, plot_df in input_df.groupby(groupby_tuples):
+        oxygen_string = '$\mathregular{O_2}$'
         if subplots == 8:
             (o2, rep) = tup
             ax = axd[(o2, rep)]
-            ax.set_title(o2 + ' $\mathregular{O_2}$' + ' replicate {}'.format(rep))
+            ax.set_title(o2 + ' ' + oxygen_string + ' replicate {}'.format(rep))
         elif subplots == 2:
             o2 = tup
             ax = axd[o2]
-            ax.set_title(o2 + ' $\mathregular{O_2}$')
+            #ax.set_title(o2 + ' $\mathregular{O_2}$')
+            ax.set_title(o2 + ' ' + oxygen_string)
             ax.set_xlabel('week')
 
         #ax.set_title(o2 + ' oxygen' + ' replicate {}'.format(rep))
@@ -149,7 +158,11 @@ def plot_subplots(input_df, plot_function, ylabel, colors,
                                  ax=ax, groupby_var='replicate', color_dict=colors,
                                  label_base=label_base)
         else:
-            plot_function(plot_df=plot_df, ax=ax, colors=colors)
+            # 170237 warning: adding label for scatter may break bars.
+            if label is None:
+                plot_function(plot_df=plot_df, ax=ax, colors=colors)
+            else:
+                plot_function(plot_df=plot_df, ax=ax, colors=colors, label=label)
 
     if portrait:
         # prevent subplot overlaps: set width, height to leave between subplots.
@@ -201,17 +214,23 @@ def label_generator(base_string, string_to_replace_XX_with):
     return base_string.replace('XX', str(string_to_replace_XX_with))
 
 
-def plot_scatter(plot_df, ax, x, y, color, marker='o', linestyle='-', alpha=1,
+def plot_scatter(plot_df, ax, x, y, colors, marker='o', linestyle='-', alpha=1,
                  label=None, label_generator_info=None):
+    """
+    :param colors: actually just one color in hex or RGB.
+    # OLD:  a list of length 1.  This is to be consistent with the bar argument colors
+    """
+    color = colors
     ax.plot(plot_df[x], plot_df[y], color=color, marker=marker,
             linestyle=linestyle, label=label, alpha=alpha)
 
 
 def plot_subplots_scatter(input_df, x, y, ylabel, marker, linestyle,
-                          color_dict=REPLICATE_COLOR_DICT, portrait=True, subplots=2):
+                          color_dict=REPLICATE_COLOR_DICT, portrait=True, subplots=2, label=''):
     plot_function = partial(plot_scatter, x=x, y=y, marker=marker, linestyle=linestyle)
-    plot = plot_subplots(input_df, plot_function=plot_function, ylabel=ylabel, colors=color_dict,
-                         portrait=portrait, multiple_series=True, subplots=2, legend_title='replicate')
+    plot = plot_subplots(input_df, plot_function=plot_function, ylabel=ylabel, label=label,
+                         colors=color_dict, portrait=portrait, multiple_series=True,
+                         subplots=2, legend_title='replicate')
     return plot
 
 

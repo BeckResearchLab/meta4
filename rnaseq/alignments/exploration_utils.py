@@ -1,4 +1,5 @@
 import textwrap
+import datetime
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -6,9 +7,15 @@ import matplotlib.pyplot as plt
 import itertools
 import os
 import re
+import sys
 
 import pandas as pd
 import seaborn as sns
+
+from functools import partial
+
+sys.path.append('/work/general_scripts')
+import plot_subplots  # 170327.  Most plots don't rely on this refactored code.
 
 def load_cryptic_to_sample_names():
     return pd.read_csv('/work/m4b_binning/assembly/data/sample_info/meta4_sample_names--cryptic_to_sample_number.tsv', sep='\t')
@@ -40,10 +47,24 @@ def filename_cleaner(name):
     subs = {'/': '--',
             ' ': '_',
             ':': '',
+            '\(':'_',  # need to escape the (, ) chars
+            '\)':'_',
             '%': '_'}
     for old, new in subs.items():
         name = re.sub(old, new, name)
     return name
+
+def dict_of_sample_names():
+    """
+    Dict that converts from 8888.8.111111.GGAAGG type numbers to
+    high_O2_replicate_3_week_2 type strings for PhD thesis.
+    """
+    si = si = pd.read_csv('/work/m4b_binning/assembly/data/sample_info/sample_info_w_cryptic.tsv',
+                          sep='\t')
+    si['name'] = si['oxygen'] + '_O2_rep_' + si['replicate'].astype(str) + "_week_" + si['week'].astype(str)
+    #return si['cryptic metatranscriptome name'].tolist()
+    return dict(zip(si['cryptic metatranscriptome name'].tolist(),
+               si['name'].tolist()))
 
 
 def load_underscore_stats(rna_fastq=True):
@@ -188,7 +209,8 @@ def plot_read_counts_by_product(gene, sample_info):
     new_colname = 'RNA reads: {}'.format(gene)
     df.rename(columns={'RNA reads': new_colname}, inplace=True)
     p = plot_faceted_gene(df, new_colname)
-    fname = './figures/gene_reads/170222_read_counts_' + filename_cleaner(gene) + '.pdf'
+    datestring = datetime.datetime.now().strftime("%y%m%d")
+    fname = './figures/gene_reads/' + datestring + '_read_counts_' + filename_cleaner(gene) + '.pdf'
     print(fname)
     p.savefig(fname, bbox_inches='tight')
 
@@ -200,17 +222,23 @@ def plot_read_fracs_by_product(gene, sample_info, fignum=None):
     folder = './figures/gene_read_fracs/'
     if not os.path.exists(folder):
         os.mkdir(folder)
+    datestring = datetime.datetime.now().strftime("%y%m%d")
     if fignum is not None:
-        fname = os.path.join(folder, '170222_read_fracs_' + str(fignum) + '_' + filename_cleaner(gene) + '.pdf')
+        fname = os.path.join(folder, datestring + '_read_fracs_' + str(fignum) + '_' + filename_cleaner(gene) + '.pdf')
     else:
-        fname = os.path.join(folder, '170222_read_fracs_' + filename_cleaner(gene) + '.pdf')
+        fname = os.path.join(folder, datestring + '_read_fracs_' + filename_cleaner(gene) + '.pdf')
     print(fname)
     p.savefig(fname, bbox_inches='tight')
 
-def plot_abundance_of_genes_with_same_names(gene_name, dataframe, fignum=None):
-    plot_df = dataframe[dataframe['product'] == gene_name]
+
+def grab_genes_by_name(gene_name, dataframe):
+    plot_df = dataframe[dataframe['product'] == gene_name].copy()
     plot_df['latex contig name'] = r'\mbox{' + plot_df['locus'] + r'}'
     plot_df['latex contig name'] = plot_df['latex contig name'].str.replace('_', '\_')
+    return plot_df
+
+def plot_abundance_of_genes_with_same_names(gene_name, dataframe, fignum=None, portrait=False, top_colors=None):
+    plot_df = grab_genes_by_name(gene_name, dataframe)
     print("plot {} in each series' box".format(
         plot_df['locus'].drop_duplicates().shape[0]))
     x='week'
@@ -218,59 +246,69 @@ def plot_abundance_of_genes_with_same_names(gene_name, dataframe, fignum=None):
 
     genes = plot_df.groupby('latex contig name')[y].max().sort_values(
         ascending=False).to_frame().reset_index()
+    num_top=7
     top_genes = plot_df.groupby('latex contig name')[y].max().sort_values(
-        ascending=False).to_frame().reset_index().head(8)['latex contig name'].tolist()
+        ascending=False).to_frame().reset_index().head(num_top)['latex contig name'].tolist()
 
-    fig, axs = plt.subplots(2, 4, figsize=(15, 6),
-                            sharex=True, sharey=True)
+    if portrait:
+        print('use portrait: 4 by 2')
+        fig, axs = plt.subplots(4, 2, figsize=(10,10), sharex=True, sharey=True)
+    else:
+        fig, axs = plt.subplots(2, 4, figsize=(14,8), sharex=True, sharey=True)
 
-    axd = {('low', 1):axs[0, 0],
-           ('low', 2):axs[0, 1],
-           ('low', 3):axs[0, 2],
-           ('low', 4):axs[0, 3],
-           ('high', 1):axs[1, 0],
-           ('high', 2):axs[1, 1],
-           ('high', 3):axs[1, 2],
-           ('high', 4):axs[1, 3]}
+    axd = plot_subplots.make_axd(axs, subplots=8, portrait=portrait)
 
-    palette = itertools.cycle(sns.color_palette("Set1", 8))
+    if top_colors is None:
+        palette = itertools.cycle(sns.color_palette("Set1", num_top).as_hex())
+    else:
+        print('use specified colors: {}'.format(top_colors))
+        palette = itertools.cycle(top_colors)
+
+    top_gene_plot_fun =  partial(plot_subplots.plot_scatter, x=x, y=y,
+                                 marker='o', linestyle='-')
+    not_top_gene_plot_fun =  partial(plot_subplots.plot_scatter, x=x, y=y,
+                                 marker='', linestyle='-')
 
     for locus, sub_df in plot_df.groupby('latex contig name'):
-        c = next(palette)
+        if locus in top_genes:
+            c = next(palette)
         sub_df = sub_df.copy()
         sub_df.sort_values('week', ascending=False, inplace=True)
 
         for tup, sub_sub_df in sub_df.groupby(['oxygen', 'replicate']):
 
             ax = axd[tup]
-            title = '{} O2, rep {}'.format(tup[0], tup[1])
-            ax.set_title(title)
-
             if locus in top_genes:
-                ax.plot(sub_sub_df[x], sub_sub_df[y],
-                        label=locus, marker='o', color=c)
+                plot = plot_subplots.plot_subplots(sub_sub_df, plot_function=top_gene_plot_fun,
+                            ylabel='fraction of fastq reads', colors=c, label=locus,
+                            portrait=portrait, multiple_series=False, subplots=8, legend_title='',
+                            prev_axs_and_axd = (axs, axd))
             else:
-                ax.plot(sub_sub_df[x], sub_sub_df[y],
-                        label=locus, color=c)
-        ax.set_xlabel(x)
+                c = '#909090'
+                plot = plot_subplots.plot_subplots(sub_sub_df, plot_function=not_top_gene_plot_fun,
+                            ylabel='fraction of fastq reads', label=locus, colors=c,
+                            portrait=portrait, multiple_series=False, subplots=8, legend_title='',
+                            prev_axs_and_axd = (axs, axd))
     fig.suptitle(gene_name, fontsize=16)
     plt.subplots_adjust(top=0.85)
-    axs[0, 0].set_ylabel('fraction of fastq reads')
-    axs[1, 0].set_ylabel('fraction of fastq reads')
-    for axv in [0, 1, 2, 3]:
-        axs[1, axv].set_xlabel(x)
-
-    axs[0, 3].legend(bbox_to_anchor=(2.7, 1.))
+    #for axv in [0, 1, 2, 3]:
+    #    axs[1, axv].set_xlabel(x)
 
     folder = './figures/expression_by_locus/'
     if not os.path.exists(folder):
         os.mkdir(folder)
-    if fignum is not None:
-        fname = os.path.join(folder, '170223_loci_read_fracs_' + str(fignum) + '_' + filename_cleaner(gene_name) + '.pdf')
+    datestring = datetime.datetime.now().strftime("%y%m%d")
+    if portrait:
+        orientation = 'portrait'
     else:
-        fname = os.path.join(folder, '170223_loci_read_fracs_' + filename_cleaner(gene_name) + '.pdf')
+        orientation = 'landscape'
+    if fignum is not None:
+        fname = os.path.join(folder, datestring + '_loci_read_fracs_' + str(fignum) + '_' + filename_cleaner(gene_name) + '--' + orientation  + '.pdf')
+    else:
+        fname = os.path.join(folder, datestring + '_loci_read_fracs_' + filename_cleaner(gene_name) + '--' + orientation  +  '.pdf')
 
     fig.savefig(fname, bbox_inches='tight')
     return fig
+
 
 

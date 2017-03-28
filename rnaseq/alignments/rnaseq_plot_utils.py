@@ -9,12 +9,14 @@ rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
 
 from collections import OrderedDict # for plot order
 
-from plot_facets import bar_facets_from_pivoted_df
-from plot_facets import add_vline_to_all_subplots
+#from plot_facets import bar_facets_from_pivoted_df
+#from plot_facets import add_vline_to_all_subplots
+from plot_subplots import bar_subplots_from_pivoted_df
+from plot_subplots import add_vline_to_all_subplots
 
 # Need to use LaTeX to get italic fonts.
 from matplotlib import rc
-rc('text', usetex=True)
+#rc('text', usetex=True)  # Necessary for using LaTeX $$ strings in matplotlib, but then
 rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
 # http://stackoverflow.com/questions/2537868/sans-serif-math-with-latex-in-matplotlib
 mpl.rcParams['text.latex.preamble'] = [
@@ -45,8 +47,8 @@ def plot_underscore_bars(input_df, filename=None, portrait=True):
         ('ambiguous','w'),
         ])
 
-    fig = bar_facets_from_pivoted_df(
-        input_df=dataframe, pre_pivoted=True, x='week',
+    fig = bar_subplots_from_pivoted_df(
+        input_df=dataframe, pre_pivoted=True, x='week', ylabel='fraction',
         order_list=list(colord.keys()),
         color_list=list(colord.values()),
         portrait=portrait, filename=filename)
