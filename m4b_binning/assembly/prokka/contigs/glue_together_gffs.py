@@ -66,7 +66,7 @@ def make_gene_table(gff_filename):
     raw = raw[ ~ raw['contig'].str.contains('##gff-version')]
     print(raw[raw['bp'].isnull()])
     raw['bp'] = raw['bp'].astype(int)
-    raw[['ID', 'product', 'bp']].to_csv(gff_filename + '.genes.tsv', sep='\t', index=False)
+    raw[['contig', 'ID', 'product', 'bp']].to_csv(gff_filename + '.genes.tsv', sep='\t', index=False)
 
 
 
