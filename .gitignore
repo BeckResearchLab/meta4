@@ -1,3 +1,15 @@
+garbage/
+
+m4b_binning/assembly/isolate_Fauzi_stats/isolate/170328_checkM_table.sh
+m4b_binning/assembly/isolate_Fauzi_stats/isolate/170328_checkM_table.sh.tsv
+m4b_binning/assembly/isolate_Fauzi_stats/isolate/checkm_isolate_results/
+m4b_binning/assembly/isolate_Fauzi_stats/isolate/checkm_isolate_results_170328/
+m4b_binning/assembly/isolate_Fauzi_stats/isolate/checkm_qa.out_err
+rnaseq/alignments/Explore_RNA-seq--170327_working_copy.ipynb
+rnaseq/alignments/Explore_RNA-seq--old_170327.ipynb
+rnaseq/pcor_new/networkx/*.gpickle
+rnaseq/rna_fastq_read_counts_total.txt
+
 m4b_binning/assembly/data/sample_info/sample_read_counts--old_strategy.tsv
 m4b_binning/assembly_concoct/
 m4b_binning/assembly_mycc_completed/
@@ -78,7 +90,6 @@ m4b_binning/assembly/map_reads_to_contigs/stdout_stderr_170217_/
 m4b_binning/assembly/map_reads_to_contigs/test_gene_counts/
 m4b_binning/assembly/metabat/
 m4b_binning/assembly/prokka/contigs/__pycache__/
-m4b_binning/garbage/
 
 m4b_binning/assembly/170219_found_executables--keep.txt
 m4b_binning/assembly/170219_found_executables.txt
