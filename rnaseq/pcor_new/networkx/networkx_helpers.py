@@ -15,38 +15,32 @@ import timeit
 
 import networkx
 
-def load_df(fname):
-    startTime = datetime.now()
-    dataframe = pd.read_csv(fname, sep='\t')
-    print('shape of input data: {}'.format(dataframe.shape))
-    regex = r'_([0-9]_[0-9]+)'
-    print('extract gene A id')
-    dataframe['gene id: A'] = dataframe['gene A'].str.extract(regex, expand=True)
-    print('extract gene B id')
-    dataframe['gene id: B'] = dataframe['gene B'].str.extract(regex, expand=True)
-    print('dataframe loading and node ID parsing time: {}'.format(datetime.now() - startTime))
-    print('number of edges (dataframe rows): {}'.format(dataframe.shape[0]))
-    return dataframe
 
-def get_unique_nodes(df):
-    df_nodes = df[['gene A', 'product A']].drop_duplicates()
-    df_nodes.rename(columns={'gene A':'gene', 'product A':'product'}, inplace=True)
-    df_nodes = \
-        df_nodes.merge(df[['gene B', 'product B']].drop_duplicates().rename(
-            columns={'gene B':'gene', 'product B':'product'}))
-    return df_nodes
+def load_edges(network_path, tail_percent):
+    startTime = datetime.now()
+    tail_decimal = tail_percent/100.
+    df = pd.read_csv(network_path, sep='\t')
+    print('time to load un-trimmed edge file: {}'.format(datetime.now() - startTime))
+    print('select out the most positive and most negative {} percent of edges'.format(tail_percent))
+    extremes = df[(df['pcor'] >= df['pcor'].quantile(1 - tail_decimal)) |
+              (df['pcor'] <= df['pcor'].quantile(tail_decimal))]
+    print('reduced edges from {} to {}'.format(df.shape[0], extremes.shape[0]))
+    return extremes
+
+def load_gff_tsv(tsv_path):
+    df = pd.read_csv(tsv_path, sep='\t')
+    df['ID'] = df['ID'].str.extract('[A-z0-9]+_([0-9]+_[0-9]+)', expand=True)
+    return df
 
 def add_nodes_from_df(network, df):
     # get set of unique nodes.
     startTime = datetime.now()
-    df_nodes = get_unique_nodes(df)
     # load nodes
-    print(df_nodes.head())
-    for idx, row in df_nodes.iterrows():
-        network.add_node(n=row['gene'], attr_dict={'product':row['product']})
+    print(df.head())
+    for idx, row in df.iterrows():
+        network.add_node(n=row['ID'], attr_dict={'product':row['product'], 'contig':row['contig']})
     print('networkx node adding time: {}'.format(datetime.now() - startTime))
     return network
-
 
 def add_edges_from_df(network, df):
     startTime = datetime.now()
@@ -58,15 +52,28 @@ def add_edges_from_df(network, df):
     print('networkx edge adding time: {}'.format(datetime.now() - startTime))
     return network
 
-def load_network(fname):
-    df = load_df(fname)
-    num_genes = len(set(df['gene A'].drop_duplicates().tolist() + df['gene B'].drop_duplicates().tolist()))
-    print('number of unique nodes: {}'.format(num_genes))
+def get_unique_nodes(df):
+    df_nodes = df[['gene A']].drop_duplicates()
+    df_nodes.rename(columns={'gene A':'gene'}, inplace=True)
+    df_nodes = \
+        df_nodes.merge(df[['gene B']].drop_duplicates().rename(
+            columns={'gene B':'gene'}))
+    return df_nodes
+
+def build_network(edges_path, tail_percent, genes_path):
+    edges = load_edges(edges_path, tail_percent)
+    genes = load_gff_tsv(genes_path)
+    genes_in_edges = get_unique_nodes(edges)
+    genes = genes[genes['ID'].isin(genes_in_edges['gene'])]
+
+    print('number of unique nodes: {}'.format(genes.shape[0]))
 
     #n = networkx.DiGraph()  # directed
     n = networkx.Graph()   # undirected
 
-    n = add_nodes_from_df(network=n, df=df)
-    n = add_edges_from_df(network=n, df=df)
+    n = add_nodes_from_df(network=n, df=genes)
+    n = add_edges_from_df(network=n, df=edges)
+    print('number of nodes: {}'.format(len(n.nodes())))
+    print('number of edges: {}'.format(len(n.edges())))
 
     return n
