@@ -9,12 +9,11 @@ def make_merged_df():
 
 def prep_sample_desc_string(merged_df, tex=False):
     if tex:
-        O2 = '_$O_2$_'
+        O2 = ' $\mathregular{O_2}$ '
     else:
-        O2 = '_O2_'
-    merged_df['descriptive string'] = merged_df['oxygen'] + O2 + 'week_' +  merged_df['week'].astype(str) + '_rep_' +  merged_df['replicate'].astype(str)
+        O2 = ' O2 '
+    merged_df['descriptive string'] = merged_df['oxygen'] + O2 + 'week ' +  merged_df['week'].astype(str) + ' rep ' +  merged_df['replicate'].astype(str)
     return merged_df
-
 
 
 if __name__ == '__main__':
