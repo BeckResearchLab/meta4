@@ -7,4 +7,12 @@ se_files_comma=`echo "$se_files" | sed "s/ /,/g"`
 
 megahit --12 $pe_files_comma -r $se_files_comma --memory 0.95 --mem-flag 2 --out-dir assembly --num-cpu-threads 128 --presets meta-sensitive >& $0.log
 
+# make a tsv of lengths
 python $DESMAN/scripts/Lengths.py -i assembly/final.contigs.fa > assembly/final.contigs.len
+
+# don't need this.  the .len file above is a .tsv file
+# # 170407: get a tsv file, too.
+# SCRIPT=/work/general_scripts/make_length_tsv.py
+# source activate py3  # for biopython
+# python $SCRIPT assembly/final.contigs.fa > assembly/final.contigs.len.tsv
+
