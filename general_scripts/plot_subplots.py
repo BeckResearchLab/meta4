@@ -20,6 +20,7 @@ mpl.rcParams['text.latex.preamble'] = [
        r'\sansmath'               # <- tricky! -- gotta actually tell tex to use!
 ]
 
+CONTIG_PARSE_REGEX = '[A-z0-9]+_([0-9]+_[0-9]+)'
 
 REPLICATE_COLOR_DICT = {1:'#66c2a5', 2:'#fc8d62', 3:'#8da0cb', 4:'#e78ac3'}
 
