@@ -1,5 +1,5 @@
 import argparse
-import os 
+import os
 import string
 
 from Bio import SeqIO
@@ -21,7 +21,7 @@ def omit_shorter_than_n_bp(original_path, n_min, n_max):
     outfile = open(outname, 'w')
 
     for record in SeqIO.parse(original_path, "fasta"):
-        record_id = record.id 
+        record_id = record.id
 
         # get rid of the shorties
         if (n_min is not None) and (len(record.seq) < n_min):
@@ -47,4 +47,4 @@ if __name__ == '__main__':
         print(parser.print_help())
     else:
         omit_shorter_than_n_bp(args.fasta, args.min, args.max)
-    
+
