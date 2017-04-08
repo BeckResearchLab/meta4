@@ -6,7 +6,7 @@ rm(list=ls(all=TRUE))
 library(reshape)
 
 dir.create('./results', showWarnings = FALSE)
-DATA_SAVE_DIR = './results/data'
+DATA_SAVE_DIR = './results/data/'
 dir.create(DATA_SAVE_DIR, showWarnings = FALSE)
 
 INPUT='input_for_R--min_percent_0.005--unnormalized.tsv'
