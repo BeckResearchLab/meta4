@@ -26,13 +26,8 @@ LOCUS_REGEX = '[_A-z]+_([0-9]+_[0-9]+)'
 
 PLOT_DIR = './figures'
 
-def load_and_drop_rare_features(min_percent, plot_dist=True):
-    """
-    Load original counts tsv, divide counts by number of reads in RNA-seq fastq,
-    delete genes that aren't above min_percent in at least one sample,
-    and return it.
-    """
 
+def prep_counts():
     # Load raw counts
     counts = pd.read_csv(RAW_DATA_PATH, sep='\t')
 
@@ -45,6 +40,18 @@ def load_and_drop_rare_features(min_percent, plot_dist=True):
     # trim gene names for storage
     # 'contigs_longer_than_1500bp_group_1_01474' --> '1_01474'
     counts['locus'] = counts['locus'].str.extract(LOCUS_REGEX, expand=True)
+
+    return counts
+
+def load_and_drop_rare_features(min_percent=None, plot_dist=True):
+    """
+    Load original counts tsv, divide counts by number of reads in RNA-seq fastq,
+    delete genes that aren't above min_percent in at least one sample,
+    and return it.
+    """
+
+    # Load raw counts
+    counts = prep_counts()
 
     fastq_counts = pd.read_csv(FASTQ_READ_COUNTS_PATH, sep='\t', names=['sample', 'fastq reads'])
     # remove the.fastq.gz suffix:
@@ -72,14 +79,19 @@ def load_and_drop_rare_features(min_percent, plot_dist=True):
     counts = cT.T  # put the genes back as rows, not columns
     # `counts.sum(axis=1).max()`
     sums = counts.sum(axis=1)
+    max_val = counts.max(axis=1)
     if plot_dist:
         plot_distribution(sums)
 
     # trim out genes that don't represent at least x% of the reads in at least one sample
     shape_before = counts.shape
-    genes_to_keep = counts[sums > min_percent]
-    print('trimmed genes to set with at least {}% of reads in at least one sample: '
-          'shape {} --> {}'.format(min_percent, shape_before, genes_to_keep.shape))
+    if min_percent is not None:
+        genes_to_keep = counts[max_val > min_percent]
+        print('trimmed genes to set with at least {}% of reads in at least one sample: '
+              'shape {} --> {}'.format(min_percent, shape_before, genes_to_keep.shape))
+    else:
+        genes_to_keep = counts # no trimming
+        print('''Don't trim values on "% of reads in at least one sample"''')
     return genes_to_keep  # dataframe
 
 def plot_distribution(series):

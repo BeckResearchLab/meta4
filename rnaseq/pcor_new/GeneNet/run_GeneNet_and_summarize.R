@@ -25,16 +25,15 @@ print(opt$percent)
 print(as.numeric(opt$percent))
 
 print('check for file name having been supplied')
-if (is.null(opt$file) | is.null(opt$percent)){
+if (is.null(opt$file)) {
   print_help(opt_parser)
   stop("Need to supply the input file name, e.g. input_for_R--min_percent_0.005--unnormalized.tsv", call.=FALSE)
 }
 
 INPUT = opt$file
-PERCENT = as.numeric(opt$percent)
-PERCENT_AS_FRAC = PERCENT/100.
+PERCENT = as.numeric(opt$percent) # note: the loaded data is already in percents.  No need to divide by 100 again.
 
-print(paste('omit genes with less than', str(PERCENT), 'of reads in at least one sample'))
+print(paste('omit genes with less than', PERCENT, 'perent of reads in at least one sample'))
 
 dir.create('./results', showWarnings = FALSE)
 DATA_SAVE_DIR = './results/data/'
@@ -62,7 +61,7 @@ dfm <- as.matrix(df)
 print(dfm[0:4,0:4])
 print('preview of colSums:')
 print(colSums(dfm)[0:5])
-keep_cols <- colSums(dfm) > PERCENT_AS_FRAC
+keep_cols <- apply(df, 2, max) > PERCENT
 print("keep_cols[0:5]:")
 print(keep_cols[0:5])
 
@@ -167,6 +166,8 @@ summary <- data.frame(do.call(rbind, Map(num_nodes_and_edges_df_edges, sizes)))
 # they elements are in lists.  Unlist them.
 summary <- apply(summary, 2, unlist)
 summary <- data.frame(summary)
+print('summary of nodes, edges at different cutoffs:')
+print(head(summary, 2))
 
 fname <- paste0(DATA_SAVE_DIR, gsub('.tsv', '', INPUT), paste0('--summary_for_different_cutoffs.tsv'))
 print(paste('save summary of networks at different cutoffs as ', fname))
