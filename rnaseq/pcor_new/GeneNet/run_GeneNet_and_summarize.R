@@ -2,9 +2,10 @@ library("optparse") # command line arguments
 library(ggplot2) # plotting at the end
 library(scales) # plotting at the end
 library(GeneNet)
+library(reshape)
 rm(list=ls(all=TRUE))
 
-library(reshape)
+#I do not find this code beautiful, and it has grown rather a lot since its half-baked beginning!
 
 option_list = list(
   make_option(c("-f", "--file"), type="character", dest="file",
@@ -59,8 +60,8 @@ dim(df)
 
 dfm <- as.matrix(df)
 print(dfm[0:4,0:4])
-print('preview of colSums:')
-print(colSums(dfm)[0:5])
+print(paste('preview of max before cutoff at', PERCENT, ' (used for trimming features):'))
+print(apply(dfm, 2, max)[0:5])
 keep_cols <- apply(df, 2, max) > PERCENT
 print("keep_cols[0:5]:")
 print(keep_cols[0:5])
@@ -71,6 +72,12 @@ print(dim(dfm))
 dfm <- dfm[, keep_cols]
 print('shape after trimming columns:')
 print(dim(dfm))
+print('first few kept columns:')
+print(dfm[0:3, 0:6])
+print('also thin out the vector of names')
+print(loci[0:4])
+loci <- loci[keep_cols]
+print(loci[0:4])
 
 # estimate partial correlations
 df.static <- ggm.estimate.pcor(dfm, method = "static")  # not time series
@@ -82,6 +89,10 @@ df.edges <- network.test.edges(df.static, direct=TRUE)
 
 # The memory requirement drops down to 35GB after this extract.network call.  Is it changing the df.edges object?
 NUM_EDGES_KEEP = 1e6
+num_edges_available = dim(df.edges)[1]
+if (num_edges_available < NUM_EDGES_KEEP) {
+	print(paste('only', num_edges_available, 'edges are available'))
+	NUM_EDGES_KEEP <- num_edges_available}
 print(paste('get top', NUM_EDGES_KEEP, 'edges'))
 df.net <- extract.network(df.edges, method.ggm="number", cutoff.ggm=NUM_EDGES_KEEP)
 # https://cran.r-project.org/web/packages/GeneNet/GeneNet.pdf
