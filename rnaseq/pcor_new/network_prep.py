@@ -47,7 +47,7 @@ def load_and_drop_rare_features(min_percent=None, plot_dist=True):
     """
     Load original counts tsv, divide counts by number of reads in RNA-seq fastq,
     delete genes that aren't above min_percent in at least one sample,
-    and return it.
+    and return these fractions.
     """
 
     # Load raw counts
@@ -108,13 +108,6 @@ def plot_distribution(series):
     ax.set_ylabel('number of genes')
     fig.savefig(figpath, bbox_inches='tight')
 
-def shuffle_cols(df):
-    """
-    Shuffle the columns of a dataframe, before cross-val sub-sampling
-    """
-    return df.sample(frac=1)
-
-
 def normalize(counts):
     """
     normalize a counts matrix with samples as rows and genes as columns
@@ -132,6 +125,9 @@ def normalize(counts):
     return scaled_df
 
 def ledoit_wolf(scaled_features):
+    """
+    Does not produceactual partial correlations.  But scales pretty well.
+    """
     # sklearn.covariance.LedoitWolf
     # class sklearn.covariance.LedoitWolf(store_precision=True, assume_centered=False, block_size=1000)[source]
     # Ledoit-Wolf optimal shrinkage coefficient estimate
@@ -162,6 +158,7 @@ def run_ledoit_wolf(genes_scaled, include_product_name_cols=False):
     prec_triangle.columns = ['gene A', 'gene B', 'pcor']
 
     # merge on gene products
+    # This step makes the files BIG, so don't save un-trimmed networks.
     print(prec_triangle.head(2))
     if include_product_name_cols:
         print('merge on the gene names to the flattened triangle of precision matrix values.  Storage memory intensive!!')
@@ -191,6 +188,7 @@ def ledoit_wolf_with_increasing_size(abundance_cutoff_list, dirname='ledoit_wolf
         normalized = normalize(important_genes.T)
         print('run ledoit wolf for abundance cutoff = {} ({} genes)'.format(ac, num_genes))
         precision = run_ledoit_wolf(normalized, include_product_name_cols=include_product_name_cols) # gets to be a lot of memory!
+        sys.stdout.flush()
         filename = 'ledoit_wolf_precision' + '_cutoff_{}--{}_genes.tsv'.format(ac, num_genes)
         filename = os.path.join(dirname, filename)
         print('save results as filename: ', filename)
@@ -199,25 +197,11 @@ def ledoit_wolf_with_increasing_size(abundance_cutoff_list, dirname='ledoit_wolf
         sys.stdout.flush()
 
 
-def graph_lasso(scaled_features, alphas=10.0**np.arange(-3,0)):
-    models=dict()
-    for alpha in alphas:
-        print('try graph lasso with alpha = {}'.format(alpha))
-        try:
-            start_time = datetime.now()
-            gl = covariance.GraphLasso(assume_centered=False, verbose=True)
-            gl.fit(scaled_features)
-            total_time = end_time - start_time
-            print('GraphLasso time for matrix with dim {}: {}'.format(
-                scaled_features.shape, str(total_time)))
-            print('finished alpha = {} without error'.format(alpha))
-        except FloatingPointError:
-            print("Failed at alpha = %s" % alpha)
-    return models
-
 
 if __name__ == '__main__':
-
+    """
+    See how big of input data Ledoit-Wolf can do.
+    """
     assert sys.version_info >= (3,0), 'this script expects python 3 to be used'
 
     # get args
