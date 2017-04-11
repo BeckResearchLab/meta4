@@ -15,6 +15,8 @@ import timeit
 
 import networkx
 
+GENE_PATH = '/work/m4b_binning/assembly/prokka/contigs/contigs_longer_than_1500bp/contigs_longer_than_1500bp_gffs_concatenated.gff.genes.tsv'
+
 
 def load_edges(network_path, tail_percent):
     startTime = datetime.now()
@@ -42,28 +44,48 @@ def add_nodes_from_df(network, df):
     print('networkx node adding time: {}'.format(datetime.now() - startTime))
     return network
 
-def add_edges_from_df(network, df):
+def add_edges_from_df(network, df, gene1colname, gene2colname):
     startTime = datetime.now()
     for idx, row in df.iterrows():
     # add_edge: The nodes u and v will be automatically added if
     # they are not already in the graph.
-        network.add_edge(row['gene A'], row['gene B'],
+        network.add_edge(row[gene1colname], row[gene2colname],
                     attr_dict = {'pcor': row['pcor']} )
     print('networkx edge adding time: {}'.format(datetime.now() - startTime))
     return network
 
-def get_unique_nodes(df):
-    df_nodes = df[['gene A']].drop_duplicates()
-    df_nodes.rename(columns={'gene A':'gene'}, inplace=True)
+def get_unique_nodes(df, gene1colname, gene2colname):
+    df_nodes = df[[gene1colname]].drop_duplicates()
+    df_nodes.rename(columns={gene1colname:'gene'}, inplace=True)
     df_nodes = \
-        df_nodes.merge(df[['gene B']].drop_duplicates().rename(
-            columns={'gene B':'gene'}))
-    return df_nodes
+        df_nodes.merge(df[[gene2colname]].drop_duplicates().rename(
+            columns={gene2colname:'gene'}))
+    return df_nodes.drop_duplicates()
 
-def build_network(edges_path, tail_percent, genes_path):
-    edges = load_edges(edges_path, tail_percent)
+def plot_edge_dist(pcors):
+    fig, ax = plt.subplots(1,1, figsize=(4,3))
+    pcors.plot.hist(ax=ax)
+
+def get_loci_colnames(df):
+    if 'node1_locus' in df.columns:
+        return 'node1_locus', 'node2_locus'
+    elif 'gene A' in df.columns:
+        return 'gene A', 'gene B'
+
+
+def build_network(edges_path, tail_percent=None, genes_path=GENE_PATH):
+    # TODO: somehow there are a few nodes without gene product attributes.
+    # TODO: how did they get in?
+    if tail_percent is not None:
+        edges = load_edges(edges_path, tail_percent)
+    else:
+        edges = pd.read_csv(edges_path, sep='\t')
+
+    print(edges.columns)
+    gene1colname, gene2colname = get_loci_colnames(edges)
+
     genes = load_gff_tsv(genes_path)
-    genes_in_edges = get_unique_nodes(edges)
+    genes_in_edges = get_unique_nodes(edges, gene1colname, gene2colname)
     genes = genes[genes['ID'].isin(genes_in_edges['gene'])]
 
     print('number of unique nodes: {}'.format(genes.shape[0]))
@@ -72,8 +94,9 @@ def build_network(edges_path, tail_percent, genes_path):
     n = networkx.Graph()   # undirected
 
     n = add_nodes_from_df(network=n, df=genes)
-    n = add_edges_from_df(network=n, df=edges)
+    n = add_edges_from_df(n, edges, gene1colname, gene2colname)
     print('number of nodes: {}'.format(len(n.nodes())))
     print('number of edges: {}'.format(len(n.edges())))
 
     return n
+
