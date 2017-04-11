@@ -47,7 +47,7 @@ def add_nodes_from_df(network, df):
     # get set of unique nodes.
     startTime = datetime.now()
     # load nodes
-    print(df.head())
+    print('add {} nodes to network'.format(df.shape[0]))
     for idx, row in df.iterrows():
         network.add_node(n=row['ID'], attr_dict={'product':row['product'], 'contig':row['contig']})
     print('networkx node adding time: {}'.format(datetime.now() - startTime))
@@ -64,12 +64,17 @@ def add_edges_from_df(network, df, gene1colname, gene2colname):
     return network
 
 def get_unique_nodes(df, gene1colname, gene2colname):
-    df_nodes = df[[gene1colname]].drop_duplicates()
-    df_nodes.rename(columns={gene1colname:'gene'}, inplace=True)
-    df_nodes = \
-        df_nodes.merge(df[[gene2colname]].drop_duplicates().rename(
-            columns={gene2colname:'gene'}))
-    return df_nodes.drop_duplicates()
+    """
+    Use sets to get the unique nodes from the two columns in the edge dataframe
+    """
+    df_nodes_set1 = df[[gene1colname]].drop_duplicates().rename(columns={gene1colname:'gene'})
+    print(df_nodes_set1.shape)
+
+    df_nodes_set2 = df[[gene2colname]].drop_duplicates().rename(columns={gene2colname:'gene'})
+    print(df_nodes_set2.shape)
+
+    unique_nodes = set(df_nodes_set2['gene'].tolist()).union(set(df_nodes_set1['gene'].tolist()))
+    return unique_nodes
 
 def plot_edge_dist(pcors):
     fig, ax = plt.subplots(1,1, figsize=(4,3))
@@ -90,12 +95,11 @@ def build_network(edges_path, tail_percent=None, genes_path=GENE_PATH):
     else:
         edges = load_edges_and_trim(edges_path, tail_percent)
 
-    print(edges.columns)
     gene1colname, gene2colname = get_loci_colnames(edges)
 
     genes = load_gff_tsv(genes_path)
     genes_in_edges = get_unique_nodes(edges, gene1colname, gene2colname)
-    genes = genes[genes['ID'].isin(genes_in_edges['gene'])]
+    genes = genes[genes['ID'].isin(genes_in_edges)]
 
     print('number of unique nodes: {}'.format(genes.shape[0]))
 
