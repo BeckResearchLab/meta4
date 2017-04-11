@@ -18,11 +18,20 @@ import networkx
 GENE_PATH = '/work/m4b_binning/assembly/prokka/contigs/contigs_longer_than_1500bp/contigs_longer_than_1500bp_gffs_concatenated.gff.genes.tsv'
 
 
-def load_edges(network_path, tail_percent):
+def load_edges(network_path):
     startTime = datetime.now()
-    tail_decimal = tail_percent/100.
     df = pd.read_csv(network_path, sep='\t')
     print('time to load un-trimmed edge file: {}'.format(datetime.now() - startTime))
+
+    print('remove null rows')  # GeneNet writes Na rows if you ask for more edges than possible.
+    rows_before = df.shape[0]
+    df = df[(~ df['node1_locus'].isnull()) & (~ df['node2_locus'].isnull())]
+    print('removed {} null rows'.format(rows_before - df.shape[0]))
+    return df
+
+def load_edges_and_trim(network_path, tail_percent=None):
+    startTime = datetime.now()
+    tail_decimal = tail_percent/100.
     print('select out the most positive and most negative {} percent of edges'.format(tail_percent))
     extremes = df[(df['pcor'] >= df['pcor'].quantile(1 - tail_decimal)) |
               (df['pcor'] <= df['pcor'].quantile(tail_decimal))]
@@ -76,10 +85,10 @@ def get_loci_colnames(df):
 def build_network(edges_path, tail_percent=None, genes_path=GENE_PATH):
     # TODO: somehow there are a few nodes without gene product attributes.
     # TODO: how did they get in?
-    if tail_percent is not None:
-        edges = load_edges(edges_path, tail_percent)
+    if tail_percent is None:
+        edges = load_edges(edges_path)
     else:
-        edges = pd.read_csv(edges_path, sep='\t')
+        edges = load_edges_and_trim(edges_path, tail_percent)
 
     print(edges.columns)
     gene1colname, gene2colname = get_loci_colnames(edges)
