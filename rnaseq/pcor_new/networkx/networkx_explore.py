@@ -34,8 +34,8 @@ def round_values_in_dict(d, n=2):
         d[k] = round(v, n)
     return d
 
-def draw(G, layout=nx.circular_layout):
-    node_labels = nx.get_node_attributes(G, 'product')
+def draw(G, node_label='product', layout=nx.circular_layout):
+    node_labels = nx.get_node_attributes(G, node_label) # usually label by gene product
 
     edge_labels = nx.get_edge_attributes(G, 'pcor')
     edge_labels = round_values_in_dict(edge_labels, n=2)
