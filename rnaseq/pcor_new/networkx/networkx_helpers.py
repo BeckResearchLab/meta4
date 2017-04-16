@@ -26,7 +26,8 @@ def load_edges(network_path):
     print('remove null rows')  # GeneNet writes Na rows if you ask for more edges than possible.
     rows_before = df.shape[0]
     df = df[(~ df['node1_locus'].isnull()) & (~ df['node2_locus'].isnull())]
-    print('removed {} null rows'.format(rows_before - df.shape[0]))
+    if rows_before > df.shape[0]:
+        print('removed {} null rows'.format(rows_before - df.shape[0]))
     return df
 
 def load_edges_and_trim(network_path, tail_percent=None):
@@ -48,7 +49,12 @@ def add_nodes_from_df(network, df):
     startTime = datetime.now()
     # load nodes
     print('add {} nodes to network'.format(df.shape[0]))
+    p = 0
     for idx, row in df.iterrows():
+        while p < 10:
+            p += 1
+            print("row['product'], row['contig']:")
+            print(row['product'], row['contig'])
         network.add_node(n=row['ID'], attr_dict={'product':row['product'], 'contig':row['contig']})
     print('networkx node adding time: {}'.format(datetime.now() - startTime))
     return network
@@ -81,11 +87,14 @@ def plot_edge_dist(pcors):
     pcors.plot.hist(ax=ax)
 
 def get_loci_colnames(df):
+    """
+    The column names from GeneNet output are not currently the same as those for Ledoit-Wolf.
+    (This could be fixed upstream, but for now this is the solution.)
+    """
     if 'node1_locus' in df.columns:
         return 'node1_locus', 'node2_locus'
     elif 'gene A' in df.columns:
         return 'gene A', 'gene B'
-
 
 def build_network(edges_path, tail_percent=None, genes_path=GENE_PATH):
     # TODO: somehow there are a few nodes without gene product attributes.
@@ -100,6 +109,7 @@ def build_network(edges_path, tail_percent=None, genes_path=GENE_PATH):
     genes = load_gff_tsv(genes_path)
     genes_in_edges = get_unique_nodes(edges, gene1colname, gene2colname)
     genes = genes[genes['ID'].isin(genes_in_edges)]
+    print(genes.head(3))
 
     print('number of unique nodes: {}'.format(genes.shape[0]))
 
