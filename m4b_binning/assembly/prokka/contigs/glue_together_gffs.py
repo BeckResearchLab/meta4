@@ -19,6 +19,11 @@ def get_group_name(filepath):
     return m.group(1)
 
 def combine_gffs(gff_file_list, filename):
+    """
+    Combine a set of .gff files into a merged set.
+    Do not include the coding sequences (encoded after ##FASTA)
+    Make the locus names unique by replacing contigs_longer_than_XX_ to contigs_longer_than_XX_group_Z
+    """
     # sort gff files, just in case
     gff_file_list = sorted(gff_file_list)
 
@@ -29,11 +34,14 @@ def combine_gffs(gff_file_list, filename):
             group = get_group_name(f)
             with open(f) as f1:
                 for line_num, line in enumerate(f1):        #keep the header from file1
+
                     # The first line is `##gff-version 3`.  Keep that for the first file.
                     if (file_num == 1) and (line_num == 0):
                         outfile.write(line)
+
                     # The end of the file has the entire FASTA sequence glued on.  Remove it.
                     elif '##FASTA' in line:
+                        # We aren't keeping the nucleotide sequences!
                         break
                     # Delete subsequent lines like `##sequence-region k141_461591 1 2140`
                     elif (line_num > 0) and line.startswith('##'):
