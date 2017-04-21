@@ -79,6 +79,18 @@ def subgraph_by_cutoff(G, cutoff, hypothetical=True):
     return SG
 
 def get_nodes_including_string(G, string):
-    return [n for n in G.nodes_iter(data=True)
-            if string in n[1]['product']]
+    tuple_list =  [n for n in G.nodes_iter(data=True)
+                   if string in n[1]['product']]
+    return tuple_list
+
+def get_nodes_including_list_of_strings(G, string_list):
+    nodes_tuples = []
+    for s in string_list:
+        nodes_tuples = nodes_tuples + get_nodes_including_string(G, s)
+        #lists.append(get_nodes_including_string(G, s))
+    node_IDs = [ID for (ID, node_dict) in nodes_tuples]
+    unique_node_IDs = list(set(node_IDs))
+    print(unique_node_IDs)
+    print('of {} nodes, {} were unique'.format(len(node_IDs), len(unique_node_IDs)))
+    return unique_node_IDs
 
