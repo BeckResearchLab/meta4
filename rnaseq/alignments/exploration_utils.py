@@ -104,8 +104,9 @@ def load_frac_sums():
 
 def load_counts_w_processing():
     """
-    Takes a few minutes...
+    Takes about 3 minutes and 30+ GB memory.
     """
+    print("load_counts_w_processing() takes > 30GB memory.  Failed on a r4.xlarge (30GB) instance.")
     unders = load_underscore_stats()
     counts = load_counts()
     frac_sums = counts.groupby('sample id')['frac RNA-seq reads'].sum()

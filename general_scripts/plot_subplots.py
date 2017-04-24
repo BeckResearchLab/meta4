@@ -167,7 +167,7 @@ def plot_subplots(input_df, plot_function, ylabel, colors,
 
     if portrait:
         # prevent subplot overlaps: set width, height to leave between subplots.
-        plt.subplots_adjust(wspace = 0.3, hspace = 0.6)
+        plt.subplots_adjust(wspace = 0.1, hspace = 0.2)
         # add legend to the upper right
         if subplots == 8:
             axd[('high', 1)].legend(loc=(1.05, 0.4), title=legend_title)
