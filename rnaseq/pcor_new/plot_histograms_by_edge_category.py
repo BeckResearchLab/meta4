@@ -8,6 +8,8 @@ import sys
 import numpy as np
 import pandas as pd
 
+from scipy.stats import mannwhitneyu
+
 # for a regex:
 sys.path.append('/work/general_scripts')
 from plot_subplots import CONTIG_PARSE_REGEX
@@ -83,7 +85,15 @@ def separate_out_linked_and_not_linked_rows(edge_df, distance_allowed):
             linked.append(row['pcor'])
         else:
             unlinked.append(row['pcor'])
+    print('Mann–Whitney U test: {}'.format(test_mannwhitneyu(linked, unlinked)))
     return linked, unlinked
+
+def test_mannwhitneyu(x, y):
+    """
+    Run the scipy stats implementation.
+    https://en.wikipedia.org/wiki/Mann%E2%80%93Whitney_U_test
+    """
+    return mannwhitneyu(x, y)
 
 def filter_out_same_same_edges(edge_df):
     """
@@ -169,7 +179,9 @@ def plot_pdf_of_same_and_different_contig_pcors(edge_df):
     same = edge_df[edge_df['same contig'] == True]
     print("same.shape: {}".format(same.shape))
     not_same = edge_df[edge_df['same contig'] == False]
+    assert edge_df.shape[0] == same_contig_pcors.shape[0] + not_same.shape[0]
     print("not_same.shape: {}".format(not_same.shape))
+    test_mannwhitneyu(same['pcor'], not_same['pcor'])
 
     a=0.3
     #bins = np.arange(-0.04, 0.14, 0.004)
