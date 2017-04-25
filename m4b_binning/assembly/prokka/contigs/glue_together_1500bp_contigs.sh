@@ -1,0 +1,4 @@
+source activate py3
+
+python glue_together_gffs.py contigs_longer_than_1500bp/
+python glue_together_faa_files.py contigs_longer_than_1500bp/
