@@ -34,7 +34,8 @@ def round_values_in_dict(d, n=2):
         d[k] = round(v, n)
     return d
 
-def draw(G, node_label='product', layout=nx.circular_layout, edge_multiplier=100):
+def draw(G, node_label='product', layout=nx.circular_layout,
+         edge_multiplier=100):
     node_labels = nx.get_node_attributes(G, node_label) # usually label by gene product
 
     edge_labels = nx.get_edge_attributes(G, 'pcor')
@@ -48,10 +49,12 @@ def draw(G, node_label='product', layout=nx.circular_layout, edge_multiplier=100
     edge_colors = [assign_color(d['pcor']) for (u,v,d) in G.edges(data=True)]
 
     pos = layout(G)
-    nx.draw(G, pos, width=edge_widths, edge_color=edge_colors)
+    nx.draw(G, pos, node_size=15, width=edge_widths, edge_color=edge_colors)
+
+    print('include node labels')
     nx.draw_networkx_labels(G, pos,
                             labels=node_labels,
-                            font_size=9)
+                                font_size=9)
 
     nx.draw_networkx_edge_labels(G, pos,
                                  edge_labels=edge_labels,
@@ -93,4 +96,40 @@ def get_nodes_including_list_of_strings(G, string_list):
     print(unique_node_IDs)
     print('of {} nodes, {} were unique'.format(len(node_IDs), len(unique_node_IDs)))
     return unique_node_IDs
+
+
+def sub_abs_pocr_df(G):
+    def sum_abs_pcors_by_node(G, node):
+        return sum([abs(d['pcor']) for n, d in G[node].items()])
+
+    sub_abs_dict = {n: sum_abs_pcors_by_node(G, n) for n, d in G.degree().items()}
+    node_info = pd.DataFrame.from_dict(sub_abs_dict, orient='index')
+    node_info.rename(columns={0: "sum(abs(pcor))"}, inplace=True)
+    node_info.sort_values('sum(abs(pcor))', ascending=False, inplace=True)
+    return node_info
+
+def node_names_df(G):
+    n_dict = {n:d['product'] for (n, d) in G.nodes(data=True)}
+    n_df = pd.DataFrame.from_dict(n_dict, orient='index')
+    n_df.rename(columns={0: "product"}, inplace=True)
+    return n_df
+
+def num_edges_df(G):
+    n_edges_dict = {n:len(G[n]) for n in G.nodes()}
+    node_info = pd.DataFrame.from_dict(n_edges_dict, orient='index')
+    node_info.rename(columns={0: "# edges"}, inplace=True)
+    node_info.sort_values("# edges", ascending=False, inplace=True)
+    return node_info
+
+def summarise_sum_abs_pcors(G):
+    pcors = sub_abs_pocr_df(G).reset_index()
+    names = node_names_df(G).reset_index()
+    merged = pd.merge(names, pcors, how='outer')
+    merged.sort_values('sum(abs(pcor))', ascending=False,
+                       inplace=True)
+
+    num_edges = num_edges_df(G).reset_index()
+    merged = pd.merge(merged, num_edges, how='outer')
+    return merged
+
 
